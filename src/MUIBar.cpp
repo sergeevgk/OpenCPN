@@ -620,6 +620,8 @@ MUIBar::~MUIBar()
     }
     if(m_scaleTextBox)
         m_scaleTextBox->Unbind(wxEVT_LEFT_DOWN, &MUIBar::OnScaleSelected, this);
+	if(m_weatherTextBox)
+		m_weatherTextBox->Unbind(wxEVT_LEFT_DOWN, &MUIBar::OnWeatherSelected, this);
 
 }
 
@@ -634,6 +636,7 @@ void MUIBar::Init()
     m_canvasOptionsAnimationTimer.SetOwner(this, CANVAS_OPTIONS_ANIMATION_TIMER_1);
     m_backcolorString = _T("GREY3");
     m_scaleTextBox = NULL;
+	m_weatherTextBox = NULL;
     m_capture_size_y = 0;
     
     m_COTopOffset = 60;  //  TODO should be below GPS/Compass
@@ -666,6 +669,10 @@ void MUIBar::SetColorScheme( ColorScheme cs )
             wxColour textbackColor = GetGlobalColor( _T("GREY1") );
             m_scaleTextBox->SetForegroundColour(textbackColor);
         }
+		if (m_weatherTextBox) {
+			wxColour textbackColor = GetGlobalColor(_T("GREY1"));
+			m_weatherTextBox->SetForegroundColour(textbackColor);
+		}
         Refresh();
         m_cs = cs;
     }
@@ -699,6 +706,24 @@ void MUIBar::OnScaleSelected( wxMouseEvent &event )
             
         }
     }
+}
+
+void MUIBar::OnWeatherSelected(wxMouseEvent &event)
+{
+	ChartCanvas *pcc = wxDynamicCast(m_parent, ChartCanvas);
+	if (!pcc) return;
+	pcc->SetToolbarWeatherEnabled(!pcc->GetToolbarWeatherEnabled());
+	if (!m_weatherTextBox)
+		return;
+
+	bool isWeatherEnabled = m_parentCanvas->GetToolbarWeatherEnabled();
+	wxString weatherString;
+	if (isWeatherEnabled)
+		weatherString = "Weather ON";
+	else
+		weatherString = "Weather OFF";
+	if (m_weatherTextBox)
+		m_weatherTextBox->SetLabel(weatherString);
 }
 
 void MUIBar::SetCanvasENCAvailable(bool avail)
@@ -747,6 +772,15 @@ void MUIBar::CreateControls()
         m_scaleTextBox->Bind(wxEVT_LEFT_DOWN, &MUIBar::OnScaleSelected, this);
 
         barSizer->AddSpacer(5);
+
+		//  Weather
+
+		m_weatherTextBox = new wxStaticText(this, wxID_ANY, _("Weather OFF"));
+		wxColour textWeatherbackColor = GetGlobalColor(_T("GREY1"));
+		m_weatherTextBox->SetForegroundColour(textWeatherbackColor);
+		barSizer->Add(m_weatherTextBox, 0, wxALIGN_CENTER_VERTICAL);
+		m_weatherTextBox->Bind(wxEVT_LEFT_DOWN, &MUIBar::OnWeatherSelected, this);
+		barSizer->AddSpacer(5);
         
         m_followButton = new MUIButton( this, ID_FOLLOW, m_scaleFactor,
                                         iconDir + _T("MUI_follow.svg"), iconDir + _T("MUI_follow_active.svg"), iconDir + _T("MUI_follow_ahead.svg"));
@@ -886,7 +920,19 @@ void MUIBar::UpdateDynamicValues()
         scaleString.Printf(_T("1:%4.1f MM"), scale / 1e6);
     
     if(m_scaleTextBox)
-    m_scaleTextBox->SetLabel(scaleString);
+		m_scaleTextBox->SetLabel(scaleString);
+
+	if (!m_weatherTextBox)
+		return;
+
+	bool isWeatherEnabled = m_parentCanvas->GetToolbarWeatherEnabled();
+	wxString weatherString;
+	if (isWeatherEnabled)
+		weatherString = "Weather ON";
+	else
+		weatherString = "Weather OFF";
+	if(m_weatherTextBox)
+		m_weatherTextBox->SetLabel(weatherString);
 }
 
 void MUIBar::SetFollowButtonState( int state )

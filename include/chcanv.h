@@ -436,6 +436,8 @@ public:
       void TouchAISToolActive( void );
       void UpdateAISTBTool( void );
       void SetToolbarScaleFactor( double scale_factor){ m_toolbar_scalefactor = scale_factor; }
+	  bool GetToolbarWeatherEnabled() { return m_toolbar_isweatherenabled; }
+	  void SetToolbarWeatherEnabled(bool weather_enabled){ m_toolbar_isweatherenabled = weather_enabled; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -848,6 +850,7 @@ private:
 
       ocpnFloatingToolbarDialog *m_toolBar;
       double      m_toolbar_scalefactor;
+	  bool		  m_toolbar_isweatherenabled;
       wxString    m_toolbarConfig;
       wxPoint     m_toolbarPosition;
       long        m_toolbarOrientation;

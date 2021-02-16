@@ -482,6 +482,7 @@ ChartCanvas::ChartCanvas ( wxFrame *frame, int canvasIndex ) :
     
     m_toolBar = NULL;
     m_toolbar_scalefactor = 1.0;
+	m_toolbar_isweatherenabled = false;
     m_toolbarOrientation = wxTB_HORIZONTAL;
     m_focus_indicator_pix = 1;
    
