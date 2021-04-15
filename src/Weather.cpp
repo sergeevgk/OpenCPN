@@ -1,57 +1,17 @@
-
 #include "wx/wxprec.h"
 
 #include "Weather.h"
 
-#include "Route.h"
-#include "Track.h"
 #include "routeman.h"
-#include "ocpndc.h"
-#include "georef.h"
-#include "chartbase.h"
 #include "navutil.h"
-#include "Select.h"
 #include "chcanv.h"
-
-#include "pluginmanager.h"
 
 #ifdef ocpnUSE_GL
 #include "glChartCanvas.h"
 extern ocpnGLOptions g_GLOptions;
 #endif
 
-extern WayPointman *pWayPointMan;
 extern Routeman *g_pRouteMan;
-extern Select *pSelect;
-extern MyConfig *pConfig;
-extern double gLat, gLon;
-extern double           g_PlanSpeed;
-extern int              g_nTrackPrecision;
-extern bool             g_bTrackDaily;
-extern bool             g_bHighliteTracks;
-extern double           g_TrackDeltaDistance;
-extern float            g_GLMinSymbolLineWidth;
-extern wxColour         g_colourTrackLineColour;
-extern PlugInManager    *g_pi_manager;
-extern wxColor GetDimColor(wxColor c);
-
-#if defined( __UNIX__ ) && !defined(__WXOSX__)  // high resolution stopwatch for profiling
-class OCPNStopWatch
-{
-public:
-	OCPNStopWatch() { Reset(); }
-	void Reset() { clock_gettime(CLOCK_REALTIME, &tp); }
-
-	double GetTime() {
-		timespec tp_end;
-		clock_gettime(CLOCK_REALTIME, &tp_end);
-		return (tp_end.tv_sec - tp.tv_sec) * 1.e3 + (tp_end.tv_nsec - tp.tv_nsec) / 1.e6;
-	}
-
-private:
-	timespec tp;
-};
-#endif
 
 Weather::Weather()
 {
@@ -73,8 +33,8 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 	wxPen *pen;
 	pen = g_pRouteMan->GetRoutePointPen();
 
-	int sx2 = 8;
-	int sy2 = 8;
+	int sx2 = 2;
+	int sy2 = 2;
 
 	wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
 
@@ -83,7 +43,7 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 	hilitebox.y -= r.y;
 	float radius;
 	hilitebox.Inflate(4);
-	radius = 4.0f;
+	radius = 1.0f;
 
 	wxColour hi_colour = pen->GetColour();
 	unsigned char transparency = 100;
