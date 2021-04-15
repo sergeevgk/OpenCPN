@@ -10855,7 +10855,7 @@ void ChartCanvas::DrawOverlayObjects( ocpnDC &dc, const wxRegion& ru )
         DrawActiveTrackInBBox( dc, GetVP().GetBBox() );
         DrawActiveRouteInBBox( dc, GetVP().GetBBox() );
     }
-    
+
     AISDraw( dc, GetVP(), this );
     ShipDraw( dc );
     AlertDraw( dc );
@@ -11076,7 +11076,6 @@ emboss_data *ChartCanvas::CreateEmbossMapData( wxFont &font, int width, int heig
 
     return pret;
 }
-
 
 void ChartCanvas::DrawAllTracksInBBox( ocpnDC& dc, LLBBox& BltBBox )
 {

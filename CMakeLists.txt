@@ -997,6 +997,7 @@ set(
   include/vector2D.h
   include/viewport.h
   include/WindowDestroyListener.h
+  include/Weather.h
   ${CMAKE_BINARY_DIR}/include/config.h
 )
 
@@ -1118,6 +1119,7 @@ set(
   src/undo.cpp
   src/update_mgr.cpp
   src/viewport.cpp
+  src/Weather.cpp
 )
 
 if (OCPN_USE_GARMINHOST)
