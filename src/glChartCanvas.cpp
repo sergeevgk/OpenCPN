@@ -1787,7 +1787,7 @@ void glChartCanvas::DrawWeather(ViewPort &vp)
 		return;
 	ocpnDC dc(*this);
 
-	Weather::Draw( m_pParentCanvas, dc, vp, vp.GetBBox() );
+	weather.Draw( m_pParentCanvas, dc, vp, vp.GetBBox() );
 }
 
 

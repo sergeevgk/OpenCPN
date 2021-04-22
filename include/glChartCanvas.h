@@ -140,6 +140,7 @@ class ocpnDC;
 class emboss_data;
 class Route;
 class ChartBaseBSB;
+class Weather;
 
 class glChartCanvas : public wxGLCanvas
 {
@@ -360,6 +361,9 @@ protected:
     int          m_tideTexHeight;
     int          m_currentTexWidth;
     int          m_currentTexHeight;
+
+
+	Weather weather;
     
     DECLARE_EVENT_TABLE()
 };
