@@ -109,39 +109,54 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 		hilitebox.Inflate(4);
 		radius = 1.0f;
 
+		unsigned char transparency = 100;
+
 		int red, green, blue;
 		double min_value_wave = find_min_wave_height();
 		double max_value_wave = find_max_wave_height();
 		double min_value_ripple = find_min_ripple_height();
 		double max_value_ripple = find_max_ripple_height();
+		green = 0;
 		red = 0;
 		blue = 0;
 
 		int mode = cc->GetWeatherHeightMode();
+		double now, min_value, max_value;
 		if (mode == WAVE_HEIGHT) {
-			double now = data[i].wave_height;
-			double min_value = min_value_wave;
-			double max_value = max_value_wave;
-			green = (now - min_value) * 255 / (max_value_wave - min_value);
+			now = data[i].wave_height;
+			min_value = min_value_wave;
+			max_value = max_value_wave;
+			
 		}
 		else if (mode == RIPPLE_HEIGHT) {
-			double now = data[i].ripple_height;
-			double min_value = min_value_ripple;
-			double max_value = max_value_ripple;
-			green = (now - min_value) * 255 / (max_value_wave - min_value);
+			now = data[i].ripple_height;
+			min_value = min_value_ripple;
+			max_value = max_value_ripple;
 		}
 		else {
-			double now = data[i].wave_height + data[i].ripple_height;
-			double min_value = min_value_wave + min_value_ripple;
-			double max_value = max_value_wave + max_value_ripple;
-			green = (now - min_value) * 255 / (max_value_wave - min_value);
+			now = data[i].wave_height + data[i].ripple_height;
+			min_value = min_value_wave + min_value_ripple;
+			max_value = max_value_wave + max_value_ripple;
+		}
+		double danger = cc->GetDangerHeight();
+		double range = max_value - min_value;
+		if (danger > max_value) {
+			range = std::max(danger - min_value, max_value - danger);
+		}
+
+		if (now < danger) {
+			green = (danger - now) * 255 / (range);
+		}
+		else {
+			red = (now - danger) * 255 / (range);
+			transparency = 180;
 		}
 		
 
 
 		wxColour hi_colour(red, green, blue, 255);
 		//wxColour hi_colour = pen->GetColour();
-		unsigned char transparency = 100;
+		
 
 		//  Highlite any selected point
 		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,

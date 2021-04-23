@@ -1441,10 +1441,6 @@ void options::Init(void) {
   
   pSoundDeviceIndex = NULL;
 
-  //pWaveHeight = NULL;
-  //pRippleHeight = NULL;
-  //pWaveRippleHeight = NULL;
-
   pCBNorthUp = NULL;
   pCBCourseUp = NULL;
   pCBLookAhead = NULL;

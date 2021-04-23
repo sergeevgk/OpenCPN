@@ -446,6 +446,8 @@ public:
 	  void SetToolbarWeatherEnabled(bool weather_enabled){ m_toolbar_isweatherenabled = weather_enabled; }
 	  int GetWeatherHeightMode() { return m_height_view_mode; }
 	  void SetWeatherHeightMode(int mode) { m_height_view_mode = mode; }
+	  double GetDangerHeight() { return m_danger_height; }
+	  void SetDangerHeight(double height) { m_danger_height = height; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -862,6 +864,7 @@ private:
 	  
 	  bool		  m_toolbar_isweatherenabled;
 	  int		  m_height_view_mode;
+	  double	  m_danger_height;
 
 
       wxString    m_toolbarConfig;

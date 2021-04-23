@@ -156,10 +156,11 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 
 	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
 
-	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 5,
+	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 100,
 		wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
 
 	rowOrientationWeather->Add(pSliderDangerHeight, inputFlags);
+	pSliderDangerHeight->Connect(wxEVT_SLIDER, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
@@ -340,6 +341,9 @@ void CanvasOptions::RefreshControlValues( void )
 		 pRippleHeight->SetValue(true);
 	 else
 		 pWaveRippleHeight->SetValue(true);
+
+	 double dangerHeight = parentCanvas->GetDangerHeight();
+	 pSliderDangerHeight->SetValue(dangerHeight*100);//m->sm
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -521,6 +525,12 @@ void CanvasOptions::UpdateCanvasOptions( void )
 
 	if (newHeightMode != parentCanvas->GetWeatherHeightMode()) {
 		parentCanvas->SetWeatherHeightMode(newHeightMode);
+		b_needReLoad = true;
+	}
+
+	double newDangerHeight = double (pSliderDangerHeight->GetValue())/100;
+	if (newDangerHeight != parentCanvas->GetDangerHeight()) {
+		parentCanvas->SetDangerHeight(newDangerHeight);
 		b_needReLoad = true;
 	}
 
