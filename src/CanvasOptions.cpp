@@ -332,6 +332,14 @@ void CanvasOptions::RefreshControlValues( void )
          pCBCourseUp->SetValue( true );
      else
          pCBHeadUp->SetValue( true );
+
+	 int weatherMode = parentCanvas->GetWeatherHeightMode();
+	 if (weatherMode == WAVE_HEIGHT)
+		 pWaveHeight->SetValue(true);
+	 else if (weatherMode == RIPPLE_HEIGHT)
+		 pRippleHeight->SetValue(true);
+	 else
+		 pWaveRippleHeight->SetValue(true);
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -502,6 +510,19 @@ void CanvasOptions::UpdateCanvasOptions( void )
         parentCanvas->SetUpMode(newMode);
         b_needReLoad = true;
     }
+
+	int newHeightMode = WAVE_HEIGHT;
+	if (pRippleHeight->GetValue()) {
+		newHeightMode = RIPPLE_HEIGHT;
+	}
+	else if (pWaveRippleHeight->GetValue()) {
+		newHeightMode = WAVE_RIPPLE_HEIGHT;
+	}
+
+	if (newHeightMode != parentCanvas->GetWeatherHeightMode()) {
+		parentCanvas->SetWeatherHeightMode(newHeightMode);
+		b_needReLoad = true;
+	}
 
     if(pCBLookAhead->GetValue() != parentCanvas->GetLookahead()){
         parentCanvas->ToggleLookahead();

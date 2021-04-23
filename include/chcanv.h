@@ -135,6 +135,12 @@ enum {
     HEAD_UP_MODE
 };
 
+enum {
+	WAVE_HEIGHT,
+	RIPPLE_HEIGHT,
+	WAVE_RIPPLE_HEIGHT
+};
+
 //----------------------------------------------------------------------------
 // ChartCanvas
 //----------------------------------------------------------------------------
@@ -438,6 +444,8 @@ public:
       void SetToolbarScaleFactor( double scale_factor){ m_toolbar_scalefactor = scale_factor; }
 	  bool GetToolbarWeatherEnabled() { return m_toolbar_isweatherenabled; }
 	  void SetToolbarWeatherEnabled(bool weather_enabled){ m_toolbar_isweatherenabled = weather_enabled; }
+	  int GetWeatherHeightMode() { return m_height_view_mode; }
+	  void SetWeatherHeightMode(int mode) { m_height_view_mode = mode; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -850,7 +858,12 @@ private:
 
       ocpnFloatingToolbarDialog *m_toolBar;
       double      m_toolbar_scalefactor;
+
+	  
 	  bool		  m_toolbar_isweatherenabled;
+	  int		  m_height_view_mode;
+
+
       wxString    m_toolbarConfig;
       wxPoint     m_toolbarPosition;
       long        m_toolbarOrientation;

@@ -76,6 +76,8 @@ private:
 	std::vector<PointWeatherData> get_all_weather_data(const std::string& path);
 	double find_max_wave_height();
 	double find_min_wave_height();
+	double find_max_ripple_height();
+	double find_min_ripple_height();
 
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();

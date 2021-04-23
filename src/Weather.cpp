@@ -110,13 +110,36 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 		radius = 1.0f;
 
 		int red, green, blue;
-		double min_value = find_min_wave_height();
-		double max_value = find_max_wave_height();
+		double min_value_wave = find_min_wave_height();
+		double max_value_wave = find_max_wave_height();
+		double min_value_ripple = find_min_ripple_height();
+		double max_value_ripple = find_max_ripple_height();
 		red = 0;
 		blue = 0;
-		double now = data[i].wave_height;
-		green = (now - min_value) * 255 / (max_value - min_value);
-		wxColour hi_colour( red, green, blue, 255 );
+
+		int mode = cc->GetWeatherHeightMode();
+		if (mode == WAVE_HEIGHT) {
+			double now = data[i].wave_height;
+			double min_value = min_value_wave;
+			double max_value = max_value_wave;
+			green = (now - min_value) * 255 / (max_value_wave - min_value);
+		}
+		else if (mode == RIPPLE_HEIGHT) {
+			double now = data[i].ripple_height;
+			double min_value = min_value_ripple;
+			double max_value = max_value_ripple;
+			green = (now - min_value) * 255 / (max_value_wave - min_value);
+		}
+		else {
+			double now = data[i].wave_height + data[i].ripple_height;
+			double min_value = min_value_wave + min_value_ripple;
+			double max_value = max_value_wave + max_value_ripple;
+			green = (now - min_value) * 255 / (max_value_wave - min_value);
+		}
+		
+
+
+		wxColour hi_colour(red, green, blue, 255);
 		//wxColour hi_colour = pen->GetColour();
 		unsigned char transparency = 100;
 
@@ -135,6 +158,59 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 		//}
 	}
 }
+
+//void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+//	for (int i = 0; i < data.size(); i++) {
+//		wxPoint r;
+//		wxRect hilitebox;
+//
+//		double lat, lon;
+//		lat = data[i].latitude;
+//		lon = data[i].longitude;
+//
+//		cc->GetCanvasPointPix(lat, lon, &r);
+//
+//		wxPen *pen;
+//		pen = g_pRouteMan->GetRoutePointPen();
+//
+//		int sx2 = 2;
+//		int sy2 = 2;
+//
+//		wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
+//
+//		hilitebox = r1;
+//		hilitebox.x -= r.x;
+//		hilitebox.y -= r.y;
+//		float radius;
+//		hilitebox.Inflate(4);
+//		radius = 1.0f;
+//
+//		int red, green, blue;
+//		double min_value = find_min_wave_height();
+//		double max_value = find_max_wave_height();
+//		red = 0;
+//		blue = 0;
+//		double now = data[i].wave_height;
+//		green = (now - min_value) * 255 / (max_value - min_value);
+//		wxColour hi_colour( red, green, blue, 255 );
+//		//wxColour hi_colour = pen->GetColour();
+//		unsigned char transparency = 100;
+//
+//		//  Highlite any selected point
+//		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+//			hi_colour, transparency);
+//
+//		//// написать текст в верхнем левом углу (отлияный способ быстро понять, что что-то работает)
+//		//if (is_downloaded) {
+//		//	wxString msg = "I was here";
+//		//	wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+//		//	dc.SetFont(*g_pFontSmall);
+//		//	wxColour cl = wxColour(61, 61, 204, 255);
+//		//	dc.SetTextForeground(cl);
+//		//	dc.DrawText(msg, 10, 10);
+//		//}
+//	}
+//}
 
 double Weather::do_work(const std::string& str) {
 	if (str.empty()) {
@@ -168,6 +244,38 @@ double Weather::find_min_wave_height() {
 
 	for (int i = 0; i < data.size(); i++) {
 		double temp = data[i].wave_height;
+		if (temp < min) {
+			min = temp;
+		}
+	}
+	return min;
+}
+
+double Weather::find_max_ripple_height() {
+	if (data.size() == 0) {
+		return -1;
+	}
+
+	double max = data[0].ripple_height;
+
+	for (int i = 0; i < data.size(); i++) {
+		double temp = data[i].ripple_height;
+		if (temp > max) {
+			max = temp;
+		}
+	}
+	return max;
+}
+
+double Weather::find_min_ripple_height() {
+	if (data.size() == 0) {
+		return -1;
+	}
+
+	double min = data[0].ripple_height;
+
+	for (int i = 0; i < data.size(); i++) {
+		double temp = data[i].ripple_height;
 		if (temp < min) {
 			min = temp;
 		}
