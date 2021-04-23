@@ -125,6 +125,45 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 // 
 //     // spacer
 //     generalSizer->Add(0, interGroupSpace);
+
+
+	// Weather Mode
+	wxStaticBoxSizer* boxWeatherMode = new wxStaticBoxSizer(new wxStaticBox(pDisplayPanel, wxID_ANY, _("Weather Mode")), wxVERTICAL);
+	generalSizer->Add(boxWeatherMode, 0, wxALL | wxEXPAND, border_size);
+	//wxRadioButton *pWaveHeight, *pRippleHeight, *WaveRippleHeight, *pWind;
+	wxBoxSizer* rowOrientationWeather = new wxBoxSizer(wxVERTICAL);
+	boxWeatherMode->Add(rowOrientationWeather);
+
+	pWaveHeight = new wxRadioButton(pDisplayPanel, wxID_ANY, _("Wave Height"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
+	rowOrientationWeather->Add(pWaveHeight, inputFlags);
+	pWaveHeight->Connect(wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
+	pRippleHeight = new wxRadioButton(pDisplayPanel, IDCO_RIPPLEHEIGHTCHECKBOX, _("Ripple Height"));
+	rowOrientationWeather->Add(pRippleHeight, wxSizerFlags(0).Align(wxALIGN_LEFT).Border(wxLEFT, group_item_spacing * 2));
+	pRippleHeight->Connect(wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
+	pWaveRippleHeight = new wxRadioButton(pDisplayPanel, IDCO_WAVERIPPLEHEIGHTCHECKBOX, _("Wave + Ripple Height"));
+	rowOrientationWeather->Add(pWaveRippleHeight, wxSizerFlags(0).Align(wxALIGN_LEFT).Border(wxLEFT, group_item_spacing * 2));
+	pWaveRippleHeight->Connect(wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
+
+#if !defined(__WXOSX__)  
+#define SLIDER_STYLE  wxSL_HORIZONTAL | wxSL_AUTOTICKS | wxSL_LABELS
+#else
+#define SLIDER_STYLE  wxSL_HORIZONTAL | wxSL_AUTOTICKS
+#endif
+	wxSize m_sliderSize = wxSize(20 * 8, 10 * 5);
+
+	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
+
+	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 5,
+		wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
+
+	rowOrientationWeather->Add(pSliderDangerHeight, inputFlags);
+
+	// spacer
+	generalSizer->Add(0, interGroupSpace);
+
     
     // Nav Mode
     wxStaticBoxSizer* boxNavMode = new wxStaticBoxSizer(new wxStaticBox(pDisplayPanel, wxID_ANY, _("Navigation Mode")), wxVERTICAL);
@@ -278,6 +317,9 @@ void CanvasOptions::RefreshControlValues( void )
     ChartCanvas *parentCanvas = wxDynamicCast(m_parent, ChartCanvas);
     if(!parentCanvas)
         return;
+
+
+	//סהוכאעü עמזו נופנור
 
     // Control options
 //    pCBToolbar->SetValue(parentCanvas->GetToolbarEnable());

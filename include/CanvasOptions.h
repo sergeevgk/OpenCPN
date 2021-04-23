@@ -55,6 +55,9 @@ enum {
     IDCO_ENCANCHOR_CHECKBOX1,
     IDCO_SHOW_AIS_CHECKBOX,
     IDCO_ATTEN_AIS_CHECKBOX,
+	IDCO_RIPPLEHEIGHTCHECKBOX,
+	IDCO_WAVERIPPLEHEIGHTCHECKBOX,
+	ID_DANGERHEIGHT,
 };
 
 class MyFrame;
@@ -96,6 +99,9 @@ private:
     wxSlider *m_pSlider_Zoom_Vector;
     wxRadioButton *pCBCourseUp, *pCBNorthUp, *pCBHeadUp, *pRBSizeAuto, *pRBSizeManual;
     wxCheckBox *pEnableZoomToCursor, *pPreserveScale;
+	wxRadioButton *pWaveHeight, *pRippleHeight, *pWaveRippleHeight, *pWind;
+
+	wxSlider *pSliderDangerHeight;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;
