@@ -168,21 +168,24 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 
 	pChoiceDateTime = new wxChoice();
 	wxArrayString labels;
-	wxString label("first");
-	wxString label2("second");
+	wxString label("no data");
 	labels.Add(label);
-	labels.Add(label2);
+	wxSize m_choiceSize = wxSize(20 * 6, 10 * 2);
+
 	if (pChoiceDateTime) {
 		pChoiceDateTime->Create(pDisplayPanel,
 			wxID_ANY,
 			wxDefaultPosition,
-			wxDefaultSize,
-			labels);
+			m_choiceSize,
+			labels,
+			wxCB_SORT);
 		int index_selected = 0;
 		pChoiceDateTime->SetSelection(index_selected);
 		rowOrientationWeather->Add(pChoiceDateTime, inputFlags);
 		pChoiceDateTime->Show();
 	}
+	pChoiceDateTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+	
 
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
@@ -366,6 +369,30 @@ void CanvasOptions::RefreshControlValues( void )
 
 	 double dangerHeight = parentCanvas->GetDangerHeight();
 	 pSliderDangerHeight->SetValue(dangerHeight*100);//m->sm
+
+
+	 std::vector<std::string> dateTimeChoices = parentCanvas->GetDateTimeChoices();
+	 pChoiceDateTime->Clear();
+	 wxString noData("no data");
+	 pChoiceDateTime->Append(noData);
+	 for(int i = 0; i < dateTimeChoices.size(); i++) {
+		 wxString temp = dateTimeChoices[i];
+		 pChoiceDateTime->Append(temp);
+	 }
+	 std::string dateTime = parentCanvas->GetDateTime();
+	 if (dateTime == "") {
+		 pChoiceDateTime->SetSelection(0);
+	 }
+	 else {
+		 int index = pChoiceDateTime->FindString(dateTime);
+		 if (index == wxNOT_FOUND) {
+			 pChoiceDateTime->SetSelection(0);
+		 }
+		 else {
+			 pChoiceDateTime->SetSelection(index);
+		 }
+	 }
+
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -553,6 +580,12 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	double newDangerHeight = double (pSliderDangerHeight->GetValue())/100;
 	if (newDangerHeight != parentCanvas->GetDangerHeight()) {
 		parentCanvas->SetDangerHeight(newDangerHeight);
+		b_needReLoad = true;
+	}
+
+	wxString temp(pChoiceDateTime->GetString(pChoiceDateTime->GetSelection()));
+	if (temp.ToStdString() != parentCanvas->GetDateTime()) {
+		parentCanvas->SetDateTime(temp.ToStdString());
 		b_needReLoad = true;
 	}
 

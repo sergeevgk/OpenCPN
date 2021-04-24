@@ -1787,6 +1787,8 @@ void glChartCanvas::DrawWeather(ViewPort &vp)
 		return;
 	ocpnDC dc(*this);
 
+	std::vector<std::string> choices = weather.GetChoicesDateTime();
+	m_pParentCanvas->SetDateTimeChoices(choices);
 	weather.Draw( m_pParentCanvas, dc, vp, vp.GetBBox() );
 }
 

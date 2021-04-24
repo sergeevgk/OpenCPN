@@ -18,9 +18,12 @@ Weather::Weather()
 
 	Weather::download_weather_from_esimo();
 	//data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
-	data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+	//data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+
+	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\data_diff_days.csv");
+	get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
 	
-	
+	//data = date_data[0].second;
 	if (data.size() > 0) {
 		is_downloaded = true;
 	}
@@ -84,6 +87,21 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 }
 
 void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+
+	std::string dateTime = cc->GetDateTime();
+
+	if (dateTime == "no data") return;
+
+	int index = -1;
+	for (int i = 0; i < date_data.size(); i++) {
+		if (date_data[i].first == dateTime) {
+			index = i;
+			break;
+		}
+	}
+	if (index == -1) return;
+	data = date_data[index].second;
+
 	for (int i = 0; i < data.size(); i++) {
 		wxPoint r;
 		wxRect hilitebox;
@@ -334,6 +352,68 @@ double Weather::find_min_ripple_height() {
 //	in.close();
 //	return all_data;
 //}
+
+void Weather::get_all_weather_date_data(const std::string& path) {
+	std::string line;
+	// std::vector<PointWeatherData> all_data;
+
+	std::ifstream in(path);
+	if (in.is_open())
+	{
+		getline(in, line);
+		const std::regex r(R"(\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\",\"([^"]*)\")");
+
+
+		while (getline(in, line))
+		{
+
+			std::smatch m;
+			std::regex_search(line, m, r);
+			std::vector<double> temp;
+
+			PointWeatherData data;
+			data.creation_time = m[1].str();
+			data.time = m[2].str();
+
+
+			data.latitude = do_work(m[3].str());
+			data.longitude = do_work(m[4].str());
+			data.wind_u = do_work(m[5].str());
+			data.wind_v = do_work(m[6].str());
+			data.wave_height = do_work(m[7].str());
+			data.wave_wind_length = do_work(m[8].str());
+			data.wave_wind_period = do_work(m[9].str());
+			data.wave_direction = do_work(m[10].str());
+			data.ripple_height = do_work(m[11].str());
+			data.ripple_direction = do_work(m[12].str());
+
+
+			int index = -1;
+			for (int i = 0; i < date_data.size(); i++) {
+				if (date_data[i].first == data.time) {
+					index = i;
+					break;
+				}
+			}
+			if (index != -1) {
+				date_data[index].second.push_back(data);
+			}
+			else {
+				std::vector<PointWeatherData> temp = { data };
+				date_data.push_back({ data.time, temp });
+			}
+		}
+	}
+	in.close();
+}
+
+std::vector<std::string> Weather::GetChoicesDateTime() {
+	std::vector<std::string> choices;
+	for (int i = 0; i < date_data.size(); i++) {
+		choices.push_back(date_data[i].first);
+	}
+	return choices;
+}
 
 std::vector<Weather::PointWeatherData> Weather::get_all_weather_data(const std::string& path) {
 	std::string line;

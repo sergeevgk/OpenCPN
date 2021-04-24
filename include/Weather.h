@@ -15,6 +15,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include <iostream>
 #include <fstream>
 #include <regex>
+#include <utility>
 
 #include <curl/curl.h>
 
@@ -69,11 +70,13 @@ public:
 	virtual ~Weather();
 
 	void Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	std::vector<std::string> GetChoicesDateTime();
 
 private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	std::vector<PointWeatherData> get_all_weather_data(const std::string& path);
+	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();
 	double find_min_wave_height();
 	double find_max_ripple_height();
@@ -85,6 +88,7 @@ private:
 private:
 	 bool is_downloaded = false;
 	 std::vector<PointWeatherData> data;
+	 std::vector<std::pair<std::string, std::vector<PointWeatherData>>> date_data;
 
 
 	 bool draw_downloaded = false;

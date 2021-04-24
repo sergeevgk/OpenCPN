@@ -443,11 +443,24 @@ public:
       void UpdateAISTBTool( void );
       void SetToolbarScaleFactor( double scale_factor){ m_toolbar_scalefactor = scale_factor; }
 	  bool GetToolbarWeatherEnabled() { return m_toolbar_isweatherenabled; }
-	  void SetToolbarWeatherEnabled(bool weather_enabled){ m_toolbar_isweatherenabled = weather_enabled; }
+	  void SetToolbarWeatherEnabled(bool weather_enabled){
+			m_toolbar_isweatherenabled = weather_enabled; 
+			//ReloadVP();
+	  }
 	  int GetWeatherHeightMode() { return m_height_view_mode; }
 	  void SetWeatherHeightMode(int mode) { m_height_view_mode = mode; }
 	  double GetDangerHeight() { return m_danger_height; }
 	  void SetDangerHeight(double height) { m_danger_height = height; }
+	  std::string GetDateTime() { return m_date_time; }
+	  void SetDateTime(std::string time) { 
+		  m_date_time = time;
+		  //ReloadVP();
+	  }
+	  std::vector<std::string> GetDateTimeChoices() { return m_data_time_choices; }
+	  void SetDateTimeChoices(std::vector<std::string> choices) { 
+		  m_data_time_choices = choices; 
+		  //ReloadVP();
+	  }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -865,6 +878,8 @@ private:
 	  bool		  m_toolbar_isweatherenabled;
 	  int		  m_height_view_mode;
 	  double	  m_danger_height;
+	  std::string m_date_time;
+	  std::vector<std::string> m_data_time_choices;
 
 
       wxString    m_toolbarConfig;
