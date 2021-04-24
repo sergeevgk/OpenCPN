@@ -148,7 +148,7 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 			green = (danger - now) * 255 / (range);
 		}
 		else {
-			red = (now - danger) * 255 / (range);
+			red = (range - (now - danger)) * 255 / (range);
 			transparency = 180;
 		}
 		

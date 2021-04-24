@@ -162,6 +162,28 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	rowOrientationWeather->Add(pSliderDangerHeight, inputFlags);
 	pSliderDangerHeight->Connect(wxEVT_SLIDER, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
+	//pChoiceDateTime
+
+	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Date & Time")), inputFlags);
+
+	pChoiceDateTime = new wxChoice();
+	wxArrayString labels;
+	wxString label("first");
+	wxString label2("second");
+	labels.Add(label);
+	labels.Add(label2);
+	if (pChoiceDateTime) {
+		pChoiceDateTime->Create(pDisplayPanel,
+			wxID_ANY,
+			wxDefaultPosition,
+			wxDefaultSize,
+			labels);
+		int index_selected = 0;
+		pChoiceDateTime->SetSelection(index_selected);
+		rowOrientationWeather->Add(pChoiceDateTime, inputFlags);
+		pChoiceDateTime->Show();
+	}
+
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
 

@@ -102,6 +102,7 @@ private:
 	wxRadioButton *pWaveHeight, *pRippleHeight, *pWaveRippleHeight, *pWind;
 
 	wxSlider *pSliderDangerHeight;
+	wxChoice *pChoiceDateTime;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;
