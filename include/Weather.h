@@ -44,7 +44,9 @@ public:
 		double ripple_height;
 		double ripple_direction;
 
-		PointWeatherData() {}
+		PointWeatherData() {
+			creation_time = "-1";
+		}
 
 		PointWeatherData(const std::string &creationTime, const std::string &time, double latitude, double longitude,
 			double windU, double windV, double waveHeight, double waveWindLength, double waveWindPeriod,
@@ -81,14 +83,21 @@ private:
 	double find_min_wave_height();
 	double find_max_ripple_height();
 	double find_min_ripple_height();
+	double find_min_latitude();
+	double find_max_latitude();
+	double find_min_longitude();
+	double find_max_longitude();
 
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
+	void draw_path();
+	void create_data_grid();
 
 private:
 	 bool is_downloaded = false;
-	 std::vector<PointWeatherData> data;
+	 //std::vector<PointWeatherData> data;
 	 std::vector<std::pair<std::string, std::vector<PointWeatherData>>> date_data;
+	 std::vector <std::pair<std::string, std::vector<std::vector<PointWeatherData>>>> grid_data;//25 блоков, каждый блок - пара из времени и двумерного массива поинтов
 
 
 	 bool draw_downloaded = false;
