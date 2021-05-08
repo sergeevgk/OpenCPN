@@ -12,6 +12,7 @@ extern ocpnGLOptions g_GLOptions;
 #endif
 
 extern Routeman *g_pRouteMan;
+extern float        g_ChartScaleFactorExp;
 
 Weather::Weather()
 {
@@ -101,6 +102,16 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 			hilitebox = r1;
 			hilitebox.x -= r.x;
 			hilitebox.y -= r.y;
+
+			
+			//hilitebox.x *= g_ChartScaleFactorExp;
+			//hilitebox.y *= g_ChartScaleFactorExp;
+			hilitebox.width *= g_ChartScaleFactorExp;
+			hilitebox.height *= g_ChartScaleFactorExp;
+
+			hilitebox.width *= VP.view_scale_ppm;
+			hilitebox.height *= VP.view_scale_ppm;
+
 			float radius;
 			hilitebox.Inflate(4);
 			radius = 1.0f;

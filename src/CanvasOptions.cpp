@@ -186,6 +186,9 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	}
 	pChoiceDateTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 	
+	pCBCheckRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKROUTE, _("Check Route"));
+	rowOrientationWeather->Add(pCBCheckRoute, verticalInputFlags);
+	
 
 	// spacer
 	generalSizer->Add(0, interGroupSpace);

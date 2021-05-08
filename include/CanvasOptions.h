@@ -58,6 +58,7 @@ enum {
 	IDCO_RIPPLEHEIGHTCHECKBOX,
 	IDCO_WAVERIPPLEHEIGHTCHECKBOX,
 	ID_DANGERHEIGHT,
+	IDCO_CHECKROUTE,
 };
 
 class MyFrame;
@@ -103,6 +104,7 @@ private:
 
 	wxSlider *pSliderDangerHeight;
 	wxChoice *pChoiceDateTime;
+	wxCheckBox *pCBCheckRoute;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;
