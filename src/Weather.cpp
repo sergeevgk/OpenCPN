@@ -59,6 +59,20 @@ Weather::~Weather(void)
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
 	draw_gradient(cc, dc, VP, box);
+	if (cc->GetCheckRouteEnabled()) {
+		draw_check_route(cc, dc, VP, box);
+	}
+}
+
+void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+	if (is_downloaded) {
+		wxString msg = "I was here";
+		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+		dc.SetFont(*g_pFontSmall);
+		wxColour cl = wxColour(61, 61, 204, 255);
+		dc.SetTextForeground(cl);
+		dc.DrawText(msg, 10, 10);
+	}
 }
 
 void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {

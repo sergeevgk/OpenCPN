@@ -188,6 +188,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	
 	pCBCheckRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKROUTE, _("Check Route"));
 	rowOrientationWeather->Add(pCBCheckRoute, verticalInputFlags);
+	pCBCheckRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 	
 
 	// spacer
@@ -396,6 +397,8 @@ void CanvasOptions::RefreshControlValues( void )
 		 }
 	 }
 
+
+	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -589,6 +592,11 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	wxString temp(pChoiceDateTime->GetString(pChoiceDateTime->GetSelection()));
 	if (temp.ToStdString() != parentCanvas->GetDateTime()) {
 		parentCanvas->SetDateTime(temp.ToStdString());
+		b_needReLoad = true;
+	}
+
+	if (pCBCheckRoute->GetValue() != parentCanvas->GetCheckRouteEnabled()) {
+		parentCanvas->SetCheckRouteEnabled(!parentCanvas->GetCheckRouteEnabled());
 		b_needReLoad = true;
 	}
 
