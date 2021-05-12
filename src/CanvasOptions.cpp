@@ -156,7 +156,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 
 	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
 
-	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 100,
+	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 600,
 		wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
 
 	rowOrientationWeather->Add(pSliderDangerHeight, inputFlags);
@@ -164,13 +164,13 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 
 	//pChoiceDateTime
 
-	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Date & Time")), inputFlags);
+	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Date \& Time")), inputFlags);
 
 	pChoiceDateTime = new wxChoice();
 	wxArrayString labels;
 	wxString label("no data");
 	labels.Add(label);
-	wxSize m_choiceSize = wxSize(20 * 6, 10 * 2);
+	wxSize m_choiceSize = wxSize(20 * 7, 10 * 2);
 
 	if (pChoiceDateTime) {
 		pChoiceDateTime->Create(pDisplayPanel,

@@ -3863,9 +3863,9 @@ void glChartCanvas::DrawGroundedOverlayObjects(ocpnDC &dc, ViewPort &vp)
 {
     m_pParentCanvas->RenderAllChartOutlines( dc, vp );
 
-    DrawStaticRoutesTracksAndWaypoints( vp );
+	DrawWeather(vp);
 
-	DrawWeather( vp );
+    DrawStaticRoutesTracksAndWaypoints( vp );
 
     DisableClipRegion();
 }
