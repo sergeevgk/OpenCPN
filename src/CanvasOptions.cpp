@@ -194,6 +194,29 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	rowOrientationWeather->Add(pCBCalculateRoute, verticalInputFlags);
 	pCBCalculateRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
+
+	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Start Time")), inputFlags);
+
+	pChoiceStartTime = new wxChoice();
+	wxArrayString labelsStart;
+	wxString labelStart("no data");
+	labelsStart.Add(labelStart);
+	wxSize m_choiceSizeStart = wxSize(20 * 7, 10 * 2);
+
+	if (pChoiceStartTime) {
+		pChoiceStartTime->Create(pDisplayPanel,
+			wxID_ANY,
+			wxDefaultPosition,
+			m_choiceSizeStart,
+			labelsStart,
+			wxCB_SORT);
+		int index_selected = 0;
+		pChoiceStartTime->SetSelection(index_selected);
+		rowOrientationWeather->Add(pChoiceStartTime, inputFlags);
+		pChoiceStartTime->Show();
+	}
+	pChoiceStartTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
 
@@ -380,12 +403,16 @@ void CanvasOptions::RefreshControlValues( void )
 
 	 std::vector<std::string> dateTimeChoices = parentCanvas->GetDateTimeChoices();
 	 pChoiceDateTime->Clear();
+	 pChoiceStartTime->Clear();
 	 wxString noData("no data");
 	 pChoiceDateTime->Append(noData);
+	 pChoiceStartTime->Append(noData);
 	 for(int i = 0; i < dateTimeChoices.size(); i++) {
 		 wxString temp = dateTimeChoices[i];
 		 pChoiceDateTime->Append(temp);
+		 pChoiceStartTime->Append(temp);
 	 }
+
 	 std::string dateTime = parentCanvas->GetDateTime();
 	 if (dateTime == "") {
 		 pChoiceDateTime->SetSelection(0);
@@ -400,6 +427,19 @@ void CanvasOptions::RefreshControlValues( void )
 		 }
 	 }
 
+	 std::string startTime = parentCanvas->GetStartTime();
+	 if (startTime == "") {
+		 pChoiceStartTime->SetSelection(0);
+	 }
+	 else {
+		 int index = pChoiceStartTime->FindString(startTime);
+		 if (index == wxNOT_FOUND) {
+			 pChoiceStartTime->SetSelection(0);
+		 }
+		 else {
+			 pChoiceStartTime->SetSelection(index);
+		 }
+	 }
 
 	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
 
@@ -597,6 +637,12 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	wxString temp(pChoiceDateTime->GetString(pChoiceDateTime->GetSelection()));
 	if (temp.ToStdString() != parentCanvas->GetDateTime()) {
 		parentCanvas->SetDateTime(temp.ToStdString());
+		b_needReLoad = true;
+	}
+
+	wxString tempStart(pChoiceStartTime->GetString(pChoiceStartTime->GetSelection()));
+	if (tempStart.ToStdString() != parentCanvas->GetStartTime()) {
+		parentCanvas->SetStartTime(tempStart.ToStdString());
 		b_needReLoad = true;
 	}
 

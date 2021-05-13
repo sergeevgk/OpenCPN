@@ -456,10 +456,13 @@ public:
 		  m_date_time = time;
 		  //ReloadVP();
 	  }
+	  std::string GetStartTime() { return m_start_time; }
+	  void SetStartTime(std::string time) {
+		  m_start_time = time;
+	  }
 	  std::vector<std::string> GetDateTimeChoices() { return m_data_time_choices; }
 	  void SetDateTimeChoices(std::vector<std::string> choices) { 
 		  m_data_time_choices = choices; 
-		  //ReloadVP();
 	  }
 	  bool GetCheckRouteEnabled() { return m_is_check_route_enabled; }
 	  void SetCheckRouteEnabled(bool is_enabled) { m_is_check_route_enabled = is_enabled; }
@@ -883,6 +886,7 @@ private:
 	  int		  m_height_view_mode;
 	  double	  m_danger_height;
 	  std::string m_date_time;
+	  std::string m_start_time;
 	  std::vector<std::string> m_data_time_choices;
 	  bool		  m_is_check_route_enabled;
 	  bool		  m_is_calculate_route_enabled;
