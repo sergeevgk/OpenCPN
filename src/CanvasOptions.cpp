@@ -189,7 +189,10 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	pCBCheckRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKROUTE, _("Check Route"));
 	rowOrientationWeather->Add(pCBCheckRoute, verticalInputFlags);
 	pCBCheckRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
-	
+
+	pCBCalculateRoute = new wxCheckBox(pDisplayPanel, IDCO_CALCULATEROUTE, _("Calculate Route"));
+	rowOrientationWeather->Add(pCBCalculateRoute, verticalInputFlags);
+	pCBCalculateRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
@@ -399,6 +402,8 @@ void CanvasOptions::RefreshControlValues( void )
 
 
 	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
+
+	pCBCalculateRoute->SetValue(parentCanvas->GetCalculateRouteEnabled());
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -597,6 +602,11 @@ void CanvasOptions::UpdateCanvasOptions( void )
 
 	if (pCBCheckRoute->GetValue() != parentCanvas->GetCheckRouteEnabled()) {
 		parentCanvas->SetCheckRouteEnabled(!parentCanvas->GetCheckRouteEnabled());
+		b_needReLoad = true;
+	}
+
+	if (pCBCalculateRoute->GetValue() != parentCanvas->GetCalculateRouteEnabled()) {
+		parentCanvas->SetCalculateRouteEnabled(!parentCanvas->GetCalculateRouteEnabled());
 		b_needReLoad = true;
 	}
 

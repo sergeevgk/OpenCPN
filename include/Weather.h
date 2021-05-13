@@ -78,6 +78,7 @@ private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	std::vector<PointWeatherData> get_all_weather_data(const std::string& path);
 	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();

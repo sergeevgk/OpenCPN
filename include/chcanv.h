@@ -463,6 +463,8 @@ public:
 	  }
 	  bool GetCheckRouteEnabled() { return m_is_check_route_enabled; }
 	  void SetCheckRouteEnabled(bool is_enabled) { m_is_check_route_enabled = is_enabled; }
+	  bool GetCalculateRouteEnabled() { return m_is_calculate_route_enabled; }
+	  void SetCalculateRouteEnabled(bool is_enabled) { m_is_calculate_route_enabled = is_enabled; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -883,6 +885,7 @@ private:
 	  std::string m_date_time;
 	  std::vector<std::string> m_data_time_choices;
 	  bool		  m_is_check_route_enabled;
+	  bool		  m_is_calculate_route_enabled;
 
 
       wxString    m_toolbarConfig;
