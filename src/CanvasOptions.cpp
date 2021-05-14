@@ -216,10 +216,51 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 		pChoiceStartTime->Show();
 	}
 	pChoiceStartTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+	time_t tempi(10);
+	wxDateTime zero(tempi);
+	zero.ResetTime();
+	pThreeHoursTime = new wxTimePickerCtrl(pDisplayPanel, ID_THREEHOURSTIME, zero.GetDateOnly(), wxDefaultPosition, wxDefaultSize, 0);
+	rowOrientationWeather->Add(pThreeHoursTime, verticalInputFlags);
+	pThreeHoursTime->Connect(wxEVT_TIME_CHANGED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 	// spacer
 	generalSizer->Add(0, interGroupSpace);
 
+	wxStaticBoxSizer* boxShipInfo = new wxStaticBoxSizer(new wxStaticBox(pDisplayPanel, wxID_ANY, _("Ship Info")), wxVERTICAL);
+	generalSizer->Add(boxShipInfo, 0, wxALL | wxEXPAND, border_size);
+
+	wxBoxSizer* rowOrientationShipInfo = new wxBoxSizer(wxVERTICAL);
+	boxShipInfo->Add(rowOrientationShipInfo);
+
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
+
+	pShipDangerHeight = new wxSpinCtrl(pDisplayPanel, ID_SHIPDANGERHEIGHT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 600, 0);
+	rowOrientationShipInfo->Add(pShipDangerHeight, verticalInputFlags);
+
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("N, kw")), inputFlags);
+
+	pShipN = new wxSpinCtrl(pDisplayPanel, ID_SHIPN, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 20000, 0);
+	rowOrientationShipInfo->Add(pShipN, verticalInputFlags);
+
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("D, ton")), inputFlags);
+
+	pShipD = new wxSpinCtrl(pDisplayPanel, ID_SHIPD, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 30000, 0);
+	rowOrientationShipInfo->Add(pShipD, verticalInputFlags);
+
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("L, m")), inputFlags);
+
+	pShipL = new wxSpinCtrl(pDisplayPanel, ID_SHIPL, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 200, 0);
+	rowOrientationShipInfo->Add(pShipL, verticalInputFlags);
+
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("delta, 10-3")), inputFlags);
+
+	pShipDelta = new wxSpinCtrl(pDisplayPanel, ID_SHIPDELTA, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000, 0);
+	rowOrientationShipInfo->Add(pShipDelta, verticalInputFlags);
+
+
+
+	// spacer
+	generalSizer->Add(0, interGroupSpace);
     
     // Nav Mode
     wxStaticBoxSizer* boxNavMode = new wxStaticBoxSizer(new wxStaticBox(pDisplayPanel, wxID_ANY, _("Navigation Mode")), wxVERTICAL);
@@ -443,7 +484,20 @@ void CanvasOptions::RefreshControlValues( void )
 
 	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
 
+	wxDateTime tempThreeHours(wxDateTime((time_t)parentCanvas->GetStartTimeThreeHours()).ToUTC());
+	pThreeHoursTime->SetValue(tempThreeHours);
+
 	pCBCalculateRoute->SetValue(parentCanvas->GetCalculateRouteEnabled());
+
+	pShipDangerHeight->SetValue(parentCanvas->GetShipDangerHeight());
+
+	pShipN->SetValue(parentCanvas->GetShipN());
+
+	pShipD->SetValue(parentCanvas->GetShipD());
+
+	pShipL->SetValue(parentCanvas->GetShipL());
+
+	pShipDelta->SetValue(parentCanvas->GetShipDelta());
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -643,7 +697,7 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	wxString tempStart(pChoiceStartTime->GetString(pChoiceStartTime->GetSelection()));
 	if (tempStart.ToStdString() != parentCanvas->GetStartTime()) {
 		parentCanvas->SetStartTime(tempStart.ToStdString());
-		b_needReLoad = true;
+		//b_needReLoad = true;
 	}
 
 	if (pCBCheckRoute->GetValue() != parentCanvas->GetCheckRouteEnabled()) {
@@ -654,6 +708,33 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	if (pCBCalculateRoute->GetValue() != parentCanvas->GetCalculateRouteEnabled()) {
 		parentCanvas->SetCalculateRouteEnabled(!parentCanvas->GetCalculateRouteEnabled());
 		b_needReLoad = true;
+	}
+	//wxDateTime((time_t)g_track_rotate_time).ToUTC()
+	int h, m, s;
+	pThreeHoursTime->GetTime(&h, &m, &s);
+	int tempThreeHours = h * 3600 + m * 60 + s;
+	if (tempThreeHours != parentCanvas->GetStartTimeThreeHours()) {
+		parentCanvas->SetStartTimeThreeHours(tempThreeHours);
+	}
+		
+	if (pShipDangerHeight->GetValue() != parentCanvas->GetShipDangerHeight()) {
+		parentCanvas->SetShipDangerHeight(pShipDangerHeight->GetValue());
+	}
+
+	if (pShipN->GetValue() != parentCanvas->GetShipN()) {
+		parentCanvas->SetShipN(pShipN->GetValue());
+	}
+
+	if (pShipD->GetValue() != parentCanvas->GetShipD()) {
+		parentCanvas->SetShipD(pShipD->GetValue());
+	}
+
+	if (pShipL->GetValue() != parentCanvas->GetShipL()) {
+		parentCanvas->SetShipL(pShipL->GetValue());
+	}
+
+	if (pShipDelta->GetValue() != parentCanvas->GetShipDelta()) {
+		parentCanvas->SetShipDelta(pShipDelta->GetValue());
 	}
 
     if(pCBLookAhead->GetValue() != parentCanvas->GetLookahead()){

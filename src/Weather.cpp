@@ -69,7 +69,9 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 	if (is_downloaded) {
-		wxString msg = "               CHECK ROUTE";
+		std::string str = "               CHECK ROUTE " + std::to_string(cc->GetStartTimeThreeHours()) + " " + std::to_string(cc->GetShipDangerHeight()) + " " + std::to_string(cc->GetShipN()) + " " + std::to_string(cc->GetShipD()) + " " + std::to_string(cc->GetShipL()) + " " + std::to_string(cc->GetShipDelta());
+	//	wxString msg = "               CHECK ROUTE";
+		wxString msg(str);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 		dc.SetFont(*g_pFontSmall);
 		wxColour cl = wxColour(61, 61, 204, 255);

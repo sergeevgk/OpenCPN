@@ -460,6 +460,18 @@ public:
 	  void SetStartTime(std::string time) {
 		  m_start_time = time;
 	  }
+	  int GetStartTimeThreeHours() { return m_start_time_three_hours; }
+	  void SetStartTimeThreeHours(int time) { m_start_time_three_hours = time; }
+	  int GetShipDangerHeight() { return m_ship_danger_height; }
+	  void SetShipDangerHeight(int height) { m_ship_danger_height = height; }
+	  int GetShipN() { return m_ship_n; }
+	  void SetShipN(int n) { m_ship_n = n; }
+	  int GetShipD() { return m_ship_d; }
+	  void SetShipD(int d) { m_ship_d = d; }
+	  int GetShipL() { return m_ship_l; }
+	  void SetShipL(int l) { m_ship_l = l; }
+	  int GetShipDelta() { return m_ship_delta; }
+	  void SetShipDelta(int delta) { m_ship_delta = delta; }
 	  std::vector<std::string> GetDateTimeChoices() { return m_data_time_choices; }
 	  void SetDateTimeChoices(std::vector<std::string> choices) { 
 		  m_data_time_choices = choices; 
@@ -884,12 +896,18 @@ private:
 	  
 	  bool		  m_toolbar_isweatherenabled;
 	  int		  m_height_view_mode;
-	  double	  m_danger_height;
+	  double	  m_danger_height;//metres
 	  std::string m_date_time;
 	  std::string m_start_time;
 	  std::vector<std::string> m_data_time_choices;
 	  bool		  m_is_check_route_enabled;
 	  bool		  m_is_calculate_route_enabled;
+	  int		  m_start_time_three_hours;
+	  int		  m_ship_danger_height;//sm
+	  int		  m_ship_n;
+	  int		  m_ship_d;
+	  int		  m_ship_l;
+	  int		  m_ship_delta;
 
 
       wxString    m_toolbarConfig;

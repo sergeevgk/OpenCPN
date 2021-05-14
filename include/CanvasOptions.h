@@ -29,6 +29,9 @@
 #define __canvasoption_H__
 
 #include "chart1.h"
+#include <wx/timectrl.h>
+#include <wx/dateevt.h>
+#include <wx/spinctrl.h>
 
 //----------------------------------------------------------------------------
 //   constants
@@ -60,6 +63,12 @@ enum {
 	ID_DANGERHEIGHT,
 	IDCO_CHECKROUTE,
 	IDCO_CALCULATEROUTE,
+	ID_THREEHOURSTIME,
+	ID_SHIPDANGERHEIGHT,
+	ID_SHIPN,
+	ID_SHIPD,
+	ID_SHIPL,
+	ID_SHIPDELTA,
 };
 
 class MyFrame;
@@ -106,6 +115,8 @@ private:
 	wxSlider *pSliderDangerHeight;
 	wxChoice *pChoiceDateTime, *pChoiceStartTime;
 	wxCheckBox *pCBCheckRoute, *pCBCalculateRoute;
+	wxTimePickerCtrl *pThreeHoursTime;
+	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;
