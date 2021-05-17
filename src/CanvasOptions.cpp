@@ -188,10 +188,12 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	
 	pCBCheckRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKROUTE, _("Check Route"));
 	rowOrientationWeather->Add(pCBCheckRoute, verticalInputFlags);
+	pCBCheckRoute->SetValue(false);
 	pCBCheckRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 	pCBCalculateRoute = new wxCheckBox(pDisplayPanel, IDCO_CALCULATEROUTE, _("Calculate Route"));
 	rowOrientationWeather->Add(pCBCalculateRoute, verticalInputFlags);
+	pCBCalculateRoute->SetValue(false);
 	pCBCalculateRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 
@@ -216,6 +218,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 		pChoiceStartTime->Show();
 	}
 	pChoiceStartTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
 	time_t tempi(10);
 	wxDateTime zero(tempi);
 	zero.ResetTime();

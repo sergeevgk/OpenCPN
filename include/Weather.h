@@ -8,6 +8,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 
 #include "vector2D.h"
 #include "ocpndc.h"
+#include "Route.h"
 
 #include <vector>
 #include <list>
@@ -94,6 +95,7 @@ private:
 	static bool download_weather_from_esimo();
 	void draw_path();
 	void create_data_grid();
+	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 
 private:
 	 bool is_downloaded = false;
@@ -103,5 +105,10 @@ private:
 
 
 	 bool draw_downloaded = false;
+
+	 double lat_min;
+	 double lat_max;
+	 double lon_min;
+	 double lon_max;
 };
 #endif

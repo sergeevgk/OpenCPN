@@ -13,6 +13,8 @@ extern ocpnGLOptions g_GLOptions;
 
 extern Routeman *g_pRouteMan;
 extern float        g_ChartScaleFactorExp;
+extern RouteList        *pRouteList;
+extern TrackList        *pTrackList;
 
 Weather::Weather()
 {
@@ -68,9 +70,50 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 }
 
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+
+	for (wxRouteListNode *node = pRouteList->GetFirst();
+		node; node = node->GetNext()) {
+		Route *pRouteDraw = node->GetData();
+
+		if (!pRouteDraw)
+			continue;
+
+		/* defer rendering active routes until later */
+		if (pRouteDraw->IsActive() || pRouteDraw->IsSelected())
+			continue;
+
+		/* defer rendering routes being edited until later */
+		if (pRouteDraw->m_bIsBeingEdited)
+			continue;
+
+		if (pRouteDraw->pRoutePointList->empty()) continue;
+
+		LLBBox weather_grid{};
+		weather_grid.Set(lat_min, lon_min, lat_max, lon_max);
+
+		if (weather_grid.IntersectOut(pRouteDraw->GetBBox())) continue;
+
+		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
+
+		analyseRouteCheck(cc, dc, VP, box,pRouteDraw);
+	}
+
+	//if (is_downloaded) {
+	//	std::string str = "               CHECK ROUTE " + std::to_string(cc->GetStartTimeThreeHours()) + " " + std::to_string(cc->GetShipDangerHeight()) + " " + std::to_string(cc->GetShipN()) + " " + std::to_string(cc->GetShipD()) + " " + std::to_string(cc->GetShipL()) + " " + std::to_string(cc->GetShipDelta());
+	////	wxString msg = "               CHECK ROUTE";
+	//	wxString msg(str);
+	//	wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	//	dc.SetFont(*g_pFontSmall);
+	//	wxColour cl = wxColour(61, 61, 204, 255);
+	//	dc.SetTextForeground(cl);
+	//	dc.DrawText(msg, 10, 10);
+	//}
+}
+
+void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route) {
 	if (is_downloaded) {
-		std::string str = "               CHECK ROUTE " + std::to_string(cc->GetStartTimeThreeHours()) + " " + std::to_string(cc->GetShipDangerHeight()) + " " + std::to_string(cc->GetShipN()) + " " + std::to_string(cc->GetShipD()) + " " + std::to_string(cc->GetShipL()) + " " + std::to_string(cc->GetShipDelta());
-	//	wxString msg = "               CHECK ROUTE";
+		std::string str = "               CHECK ROUTE " + route->GetName();
+		//	wxString msg = "               CHECK ROUTE";
 		wxString msg(str);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 		dc.SetFont(*g_pFontSmall);
@@ -79,6 +122,7 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 		dc.DrawText(msg, 10, 10);
 	}
 }
+
 
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 	if (is_downloaded) {
@@ -487,10 +531,10 @@ std::vector<std::string> Weather::GetChoicesDateTime() {
 }
 
 void Weather::create_data_grid() {
-	double lat_min = find_min_latitude();
-	double lat_max = find_max_latitude();
-	double lon_min = find_min_longitude();
-	double lon_max = find_max_longitude();
+	lat_min = find_min_latitude();
+	lat_max = find_max_latitude();
+	lon_min = find_min_longitude();
+	lon_max = find_max_longitude();
 
 	int lat_size = (lat_max - lat_min) * 10 + 1;
 	int lon_size = (lon_max - lon_min) * 10 + 1;
