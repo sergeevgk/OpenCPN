@@ -260,6 +260,10 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	pShipDelta = new wxSpinCtrl(pDisplayPanel, ID_SHIPDELTA, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 1000, 0);
 	rowOrientationShipInfo->Add(pShipDelta, verticalInputFlags);
 
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("speed, knot")), inputFlags);
+	pShipSpeed = new wxSpinCtrl(pDisplayPanel, ID_SHIPSPEED, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 200, 0);
+	rowOrientationShipInfo->Add(pShipSpeed, verticalInputFlags);
+
 
 
 	// spacer
@@ -501,6 +505,8 @@ void CanvasOptions::RefreshControlValues( void )
 	pShipL->SetValue(parentCanvas->GetShipL());
 
 	pShipDelta->SetValue(parentCanvas->GetShipDelta());
+
+	pShipSpeed->SetValue(parentCanvas->GetShipSpeed());
     
     pCBLookAhead->SetValue(parentCanvas->GetLookahead());
     
@@ -738,6 +744,10 @@ void CanvasOptions::UpdateCanvasOptions( void )
 
 	if (pShipDelta->GetValue() != parentCanvas->GetShipDelta()) {
 		parentCanvas->SetShipDelta(pShipDelta->GetValue());
+	}
+
+	if (pShipSpeed->GetValue() != parentCanvas->GetShipSpeed()) {
+		parentCanvas->SetShipSpeed(pShipSpeed->GetValue());
 	}
 
     if(pCBLookAhead->GetValue() != parentCanvas->GetLookahead()){

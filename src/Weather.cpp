@@ -71,6 +71,8 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 
+	if (cc->GetShipSpeed() <= 0) { return; }
+
 	for (wxRouteListNode *node = pRouteList->GetFirst();
 		node; node = node->GetNext()) {
 		Route *pRouteDraw = node->GetData();
@@ -111,8 +113,170 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 }
 
 void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route) {
+
+	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
+	RoutePoint *prp2 = node->GetData();
+
+	double sum_time = 0;
+	double v = cc->GetShipSpeed();//////////////IMPLEMENT
+
+	for (node = node->GetNext(); node; node = node->GetNext()) {
+		RoutePoint *prp1 = prp2;
+		prp2 = node->GetData();
+
+		double lat1, lon1, lat2, lon2;
+		lat1 = prp1->m_lat;
+		lon1 = prp1->m_lon;
+		lat2 = prp2->m_lat;
+		lon2 = prp2->m_lon;
+
+
+		double lat_start, lon_start;
+
+		lat_start = std::round(lat1 * 10) / 10;
+		lon_start = std::round(lon1 * 10) / 10;
+
+		double lat_finish, lon_finish;
+
+		lat_finish = std::round(lat2 * 10) / 10;
+		lon_finish = std::round(lon2 * 10) / 10;
+		 
+		
+
+
+		double norm_lat = 0.0, norm_lon = 0.0;//в какую сторону будет движение по сетке, нормаль то есть
+
+		if (lat1 > lat2) {
+			norm_lat = -0.1;
+		}
+		else if (lat1 < lat2){
+			norm_lat = 0.1;
+		}
+
+		if (lon1 > lon2) {
+			norm_lon = -0.1;
+		}
+		else if (lon1 < lon2){
+			norm_lon = 0.1;
+		}
+
+
+		//то есть в чем идея: делим путь на три этапа: 1) из начальной точки до первой боковой грани 2) далее по граням движение 3) от последней грани до финишной точки
+
+
+		//этап 1
+
+		double k = 0;
+		if (norm_lon != 0) {
+			k = (lat2 - lat1) / (lon2 - lon1);
+		}
+
+		double b = 0;
+		b = lat1 - k * lon1;
+
+		double cos = (abs((lon1 - lon2))) / (sqrt((lon1 - lon2) * (lon1 - lon2) + (lat1 - lat2) * (lat1 - lat2)));
+		double sin = (abs((lat1 - lat2))) / (sqrt((lon1 - lon2) * (lon1 - lon2) + (lat1 - lat2) * (lat1 - lat2)));
+
+		double prev_lat = lat1, prev_lon = lon1;
+		double prev_grid_lat = lat_start;
+		double prev_grid_lon = lon_start;
+
+		
+
+		while ((((int)(prev_grid_lat * 10)) != (int)(lat_finish * 10)) || ((int)(prev_grid_lon) != (int)(lon_finish))) {
+			//check for waves and others
+			double to_next_lon;
+			double to_next_lat;
+			bool is_lat_step = true;
+			if (norm_lat == 0) is_lat_step = false;
+			double lat_time = -1;
+			double lon_time = -1;
+			
+			if (norm_lat != 0) {
+				if (norm_lat < 0) {
+					to_next_lat = prev_lat - (prev_grid_lat - 0.05);
+				}
+				else {
+					to_next_lat = prev_grid_lat + 0.05 - prev_lat;
+				}
+				lat_time = (to_next_lat / sin) / v;
+			}
+
+			if (norm_lon != 0) {
+				if (norm_lon < 0) {
+					to_next_lon = prev_lon - (prev_grid_lon - 0.05);
+				}
+				else {
+					to_next_lon = prev_grid_lon + 0.05 - prev_lon;
+				}
+				lon_time = (to_next_lon / cos) / v;
+			}
+
+			if (lat_time == -1) {
+				is_lat_step = false;
+			} else if (lon_time == -1) {
+				is_lat_step = true;
+			}
+			else {
+				is_lat_step = (lat_time < lon_time);
+			}
+
+			//можно уменьшить погрешность, если точку пересечения находить уже по уравнению начальному, но мне пофиг
+
+			double delta_lat = 0;
+			double delta_lon = 0;
+			if (is_lat_step) {
+				delta_lat = to_next_lat;
+				if (norm_lon != 0) {
+					delta_lon = to_next_lat * cos / sin;
+				}
+			}
+			else {
+				delta_lon = to_next_lon;
+				if (norm_lat != 0) {
+					delta_lat = to_next_lon * sin / cos;
+				}
+			}
+			if (norm_lat > 0) {
+				prev_lat += delta_lat;
+				if (is_lat_step) {
+					prev_grid_lat += 0.1;
+					//if (prev_grid_lat > lat_finish - 0.1) break;
+				}
+			}
+			else {
+				prev_lat -= delta_lat;
+				if (is_lat_step) {
+					prev_grid_lat -= 0.1;
+					//if (prev_grid_lat < lat_finish + 0.1) break;
+				}
+			}
+
+			if (norm_lon > 0) {
+				prev_lon += delta_lon;
+				if (!is_lat_step) {
+					prev_grid_lon += 0.1;
+					//if (prev_grid_lon > lon_finish + 0.1) break;
+				}
+			}
+			else {
+				prev_lon -= delta_lon;
+				if (!is_lat_step) {
+					prev_grid_lon -= 0.1;
+					//if (0.1 + prev_grid_lon < lon_finish) break;
+				}
+			}
+			sum_time += std::min(lat_time, lon_time);
+		}
+
+		double finishing_distance = sqrt((lon2 - prev_lon)*(lon2 - prev_lon) + (lat2 - prev_lat)*(lat2 - prev_lat));
+		sum_time += finishing_distance / v;
+
+		
+	}
+
 	if (is_downloaded) {
-		std::string str = "               CHECK ROUTE " + route->GetName();
+		std::string str = "                                   " + route->GetName() + "                                                                         " + std::to_string(sum_time);
 		//	wxString msg = "               CHECK ROUTE";
 		wxString msg(str);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
@@ -121,6 +285,10 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		dc.SetTextForeground(cl);
 		dc.DrawText(msg, 10, 10);
 	}
+}
+
+bool Weather::is_deep_enough(double lat, double lon) {
+	return true;
 }
 
 

@@ -11,6 +11,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include "Route.h"
 
 #include <vector>
+#include <cmath>
 #include <list>
 #include <deque>
 #include <iostream>
@@ -93,9 +94,10 @@ private:
 
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
-	void draw_path();
+	void draw_path(); 
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
+	bool is_deep_enough(double lat, double lon);
 
 private:
 	 bool is_downloaded = false;

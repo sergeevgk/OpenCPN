@@ -69,6 +69,7 @@ enum {
 	ID_SHIPD,
 	ID_SHIPL,
 	ID_SHIPDELTA,
+	ID_SHIPSPEED,
 };
 
 class MyFrame;
@@ -116,7 +117,7 @@ private:
 	wxChoice *pChoiceDateTime, *pChoiceStartTime;
 	wxCheckBox *pCBCheckRoute, *pCBCalculateRoute;
 	wxTimePickerCtrl *pThreeHoursTime;
-	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta;
+	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta, *pShipSpeed;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;

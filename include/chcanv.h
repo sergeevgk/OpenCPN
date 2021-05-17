@@ -472,6 +472,8 @@ public:
 	  void SetShipL(int l) { m_ship_l = l; }
 	  int GetShipDelta() { return m_ship_delta; }
 	  void SetShipDelta(int delta) { m_ship_delta = delta; }
+	  int GetShipSpeed() { return m_ship_speed; }
+	  void SetShipSpeed(int speed) { m_ship_speed = speed; }
 	  std::vector<std::string> GetDateTimeChoices() { return m_data_time_choices; }
 	  void SetDateTimeChoices(std::vector<std::string> choices) { 
 		  m_data_time_choices = choices; 
@@ -908,6 +910,7 @@ private:
 	  int		  m_ship_d;
 	  int		  m_ship_l;
 	  int		  m_ship_delta;
+	  int		  m_ship_speed;
 
 
       wxString    m_toolbarConfig;
