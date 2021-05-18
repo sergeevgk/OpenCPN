@@ -99,6 +99,7 @@ private:
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	bool is_deep_enough(double lat, double lon);
+	double calculate_speed_koef(ChartCanvas *cc, double h);
 
 private:
 	 bool is_downloaded = false;

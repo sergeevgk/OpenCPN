@@ -43,7 +43,9 @@ Weather::Weather()
 
 	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\data_diff_days.csv");
 	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
-	get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
+
+	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
+	get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\3three_data.csv");
 	create_data_grid();
 
 	//data = date_data[0].second;
@@ -120,7 +122,8 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	RoutePoint *prp2 = node->GetData();
 
 	double sum_time = 0;//в часах
-	double v = cc->GetShipSpeed();//////////////IMPLEMENT
+	double v_nominal = cc->GetShipSpeed();//////////////IMPLEMENT
+	double v = -1;
 
 	std::string start_time = cc->GetStartTime();
 	
@@ -195,6 +198,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		while (((std::round(prev_grid_lat * 10)) != std::round(lat_finish * 10)) || (std::round(prev_grid_lon * 10) != std::round(lon_finish * 10))) {
 
 			double sum_waves = -1;
+			v = -1;
 			//check for waves and others
 			if (now_time != "no data" && now_time != "") {
 				if ((prev_grid_lat >= lat_min) && (prev_grid_lat <= lat_max) && (prev_grid_lon >= lon_min) && (prev_grid_lon <= lon_max)) {
@@ -209,20 +213,12 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 							break;
 						}
 					}
-					if (ind_now_time == -1) {
-						errors += "ERRRRRROR";
-					}
-					if (ind_lat >= grid_data[ind_now_time].second.size()) {
-						errors += "ERRRRRROR";
-					}
-					if (ind_lon >= grid_data[ind_now_time].second[ind_lat].size()) {
-						errors += "ERRRRRROR";
-					}
 					PointWeatherData now_square = grid_data[ind_now_time].second[ind_lat][ind_lon];
+					
 					if (now_square.creation_time != "-1") {
 						sum_waves = now_square.wave_height + now_square.ripple_height;
-
-						if (sum_waves > ((double)cc->GetShipDangerHeight())/100) {
+						v = v_nominal * calculate_speed_koef(cc, sum_waves);
+						if (sum_waves > ((double)cc->GetShipDangerHeight())/100 || !is_deep_enough(prev_lat, prev_lon)) {
 							std::string temp = "huge wave:" + std::to_string(sum_waves) + " in " + std::to_string(prev_lat) + " " + std::to_string(prev_lon);
 							errors += temp + "\n";
 
@@ -232,6 +228,9 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 				}
 			}
 			//
+			if (v == -1) {
+				v = v_nominal;
+			}
 			double to_next_lon;
 			double to_next_lat;
 			bool is_lat_step = true;
@@ -361,6 +360,28 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		dc.SetTextForeground(cl);
 		dc.DrawText(msg, 10, 10);
 	}
+}
+
+double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
+	double N, D, L, delta;
+	N = cc->GetShipN();
+	D = cc->GetShipD();
+	L = cc->GetShipL();
+	delta = ((double)cc->GetShipDelta()) / 1000;
+	if (N == 0 || D == 0 || L == 0 || delta == 0) {
+		return 1;
+	}
+
+	double g, g1, g2, g3;
+	g1 = std::pow((N / D), -1.14) - 2;
+	g2 = std::pow((delta/(1.143 - 1.425 * N / D)), 4.7);
+	g3 = 1.25 * std::exp(-1.48*(10 * h / L));
+	g = g1 * g2 * g3;
+	double k = std::exp(-g * (10 * h / L) * (10 * h / L));
+	if (k > 1 || k <= 0) {
+		k = 1;
+	}
+	return k;
 }
 
 bool Weather::is_deep_enough(double lat, double lon) {
@@ -832,10 +853,6 @@ void Weather::create_data_grid() {
 		for (int ind = 0; ind < date_data[i].second.size(); ind++) {
 			int lat_ind = (date_data[i].second[ind].latitude - lat_min) * 10;
 			int lon_ind = (date_data[i].second[ind].longitude - lon_min) * 10;
-			//if (lat_ind >= lat_size) continue;
-			/*if (t[lat_ind].size() == 0) {
-				t[lat_ind].resize(lon_size);
-			}*/
 			t[lat_ind][lon_ind] = date_data[i].second[ind];
 		}
 		grid_data.push_back({ date_data[i].first, t });
