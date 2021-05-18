@@ -72,7 +72,9 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 
 	if (cc->GetShipSpeed() <= 0) { return; }
-
+	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
+	if ((cc->GetStartTime() == "no data") || cc->GetStartTime() == "") return;
+		 
 	for (wxRouteListNode *node = pRouteList->GetFirst();
 		node; node = node->GetNext()) {
 		Route *pRouteDraw = node->GetData();
@@ -117,8 +119,18 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
 	RoutePoint *prp2 = node->GetData();
 
-	double sum_time = 0;
+	double sum_time = 0;//в часах
 	double v = cc->GetShipSpeed();//////////////IMPLEMENT
+
+	std::string start_time = cc->GetStartTime();
+	
+	double start_time_three_hours = cc->GetStartTimeThreeHours();
+	double now_time_three_hours = start_time_three_hours / 60 / 60;//в часах
+	std::string now_time = start_time;
+
+	std::vector<std::string> all_choices = GetChoicesDateTime();
+	std::sort(all_choices.begin(), all_choices.end());
+	std::string errors = "\n\n\n";
 
 	for (node = node->GetNext(); node; node = node->GetNext()) {
 		RoutePoint *prp1 = prp2;
@@ -141,8 +153,6 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		lat_finish = std::round(lat2 * 10) / 10;
 		lon_finish = std::round(lon2 * 10) / 10;
 		 
-		
-
 
 		double norm_lat = 0.0, norm_lon = 0.0;//в какую сторону будет движение по сетке, нормаль то есть
 
@@ -163,7 +173,6 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 
 		//то есть в чем идея: делим путь на три этапа: 1) из начальной точки до первой боковой грани 2) далее по граням движение 3) от последней грани до финишной точки
 
-
 		//этап 1
 
 		double k = 0;
@@ -183,8 +192,46 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 
 		
 
-		while ((((int)(prev_grid_lat * 10)) != (int)(lat_finish * 10)) || ((int)(prev_grid_lon) != (int)(lon_finish))) {
+		while (((std::round(prev_grid_lat * 10)) != std::round(lat_finish * 10)) || (std::round(prev_grid_lon * 10) != std::round(lon_finish * 10))) {
+
+			double sum_waves = -1;
 			//check for waves and others
+			if (now_time != "no data" && now_time != "") {
+				if ((prev_grid_lat >= lat_min) && (prev_grid_lat <= lat_max) && (prev_grid_lon >= lon_min) && (prev_grid_lon <= lon_max)) {
+					int ind_lat, ind_lon;
+					ind_lat = (prev_grid_lat - lat_min) * 10;
+					ind_lon = (prev_grid_lon - lon_min) * 10;
+
+					int ind_now_time = -1;
+					for (int i = 0; i < grid_data.size(); i++) {
+						if (grid_data[i].first == now_time) {
+							ind_now_time = i;
+							break;
+						}
+					}
+					if (ind_now_time == -1) {
+						errors += "ERRRRRROR";
+					}
+					if (ind_lat >= grid_data[ind_now_time].second.size()) {
+						errors += "ERRRRRROR";
+					}
+					if (ind_lon >= grid_data[ind_now_time].second[ind_lat].size()) {
+						errors += "ERRRRRROR";
+					}
+					PointWeatherData now_square = grid_data[ind_now_time].second[ind_lat][ind_lon];
+					if (now_square.creation_time != "-1") {
+						sum_waves = now_square.wave_height + now_square.ripple_height;
+
+						if (sum_waves > ((double)cc->GetShipDangerHeight())/100) {
+							std::string temp = "huge wave:" + std::to_string(sum_waves) + " in " + std::to_string(prev_lat) + " " + std::to_string(prev_lon);
+							errors += temp + "\n";
+
+							print_error_zone(cc, dc, VP, box, prev_lat, prev_lon);
+						}
+					}
+				}
+			}
+			//
 			double to_next_lon;
 			double to_next_lat;
 			bool is_lat_step = true;
@@ -195,9 +242,11 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 			if (norm_lat != 0) {
 				if (norm_lat < 0) {
 					to_next_lat = prev_lat - (prev_grid_lat - 0.05);
+					//to_next_lat = prev_grid_lat + 0.05 - prev_lat;
 				}
 				else {
 					to_next_lat = prev_grid_lat + 0.05 - prev_lat;
+					//to_next_lat = prev_lat - (prev_grid_lat - 0.05);
 				}
 				lat_time = (to_next_lat / sin) / v;
 			}
@@ -205,9 +254,11 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 			if (norm_lon != 0) {
 				if (norm_lon < 0) {
 					to_next_lon = prev_lon - (prev_grid_lon - 0.05);
+					//to_next_lon = prev_grid_lon + 0.05 - prev_lon;
 				}
 				else {
 					to_next_lon = prev_grid_lon + 0.05 - prev_lon;
+					//to_next_lon = prev_lon - (prev_grid_lon - 0.05);
 				}
 				lon_time = (to_next_lon / cos) / v;
 			}
@@ -267,6 +318,31 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 				}
 			}
 			sum_time += std::min(lat_time, lon_time);
+			//написать поддержку нужного времени - добавлять время и перекидывать на другой индекс
+			now_time_three_hours += std::min(lat_time, lon_time);
+			if (now_time_three_hours >= 3) {
+				int spin = now_time_three_hours / 3;
+				if (now_time == "no data") {
+					now_time_three_hours -= spin * 3;
+					continue;
+				}
+
+				int ind_now_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == now_time) {
+						ind_now_time = i;
+						break;
+					}
+				}
+
+				if (ind_now_time + spin >= all_choices.size()) {
+					now_time = "no data";
+				}
+				else {
+					now_time = all_choices[ind_now_time + spin];
+				}
+				now_time_three_hours -= spin * 3;
+			}
 		}
 
 		double finishing_distance = sqrt((lon2 - prev_lon)*(lon2 - prev_lon) + (lat2 - prev_lat)*(lat2 - prev_lat));
@@ -276,7 +352,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	}
 
 	if (is_downloaded) {
-		std::string str = "                                   " + route->GetName() + "                                                                         " + std::to_string(sum_time);
+		std::string str = "                                   " + route->GetName() + "                                                                         " + std::to_string(sum_time) + errors;
 		//	wxString msg = "               CHECK ROUTE";
 		wxString msg(str);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
@@ -291,6 +367,43 @@ bool Weather::is_deep_enough(double lat, double lon) {
 	return true;
 }
 
+void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
+	wxPoint r;
+	wxRect hilitebox;
+
+	cc->GetCanvasPointPix(lat, lon, &r);
+
+	wxPen *pen;
+	pen = g_pRouteMan->GetRoutePointPen();
+
+	int sx2 = 2;
+	int sy2 = 2;
+
+	wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
+
+	hilitebox = r1;
+	hilitebox.x -= r.x;
+	hilitebox.y -= r.y;
+
+	float radius;
+	hilitebox.Inflate(4);
+	radius = 1.0f;
+
+	unsigned char transparency = 200;
+
+	int red, green, blue;
+	green = 0;
+	red = 135;
+	blue = 135;
+
+	wxColour hi_colour(red, green, blue, 255);
+	//wxColour hi_colour = pen->GetColour();
+
+
+	//  Highlite any selected point
+	AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+		hi_colour, transparency);
+}
 
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 	if (is_downloaded) {
@@ -713,15 +826,16 @@ void Weather::create_data_grid() {
 		for (int j = 0; j < lat_size; j++) {
 			std::vector<PointWeatherData> temp;
 			t.push_back(temp);
+			t[t.size() - 1].resize(lon_size);
 		}
 
 		for (int ind = 0; ind < date_data[i].second.size(); ind++) {
 			int lat_ind = (date_data[i].second[ind].latitude - lat_min) * 10;
 			int lon_ind = (date_data[i].second[ind].longitude - lon_min) * 10;
-			if (lat_ind >= lat_size) continue;
-			if (t[lat_ind].size() == 0) {
+			//if (lat_ind >= lat_size) continue;
+			/*if (t[lat_ind].size() == 0) {
 				t[lat_ind].resize(lon_size);
-			}
+			}*/
 			t[lat_ind][lon_ind] = date_data[i].second[ind];
 		}
 		grid_data.push_back({ date_data[i].first, t });
