@@ -154,7 +154,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 #endif
 	wxSize m_sliderSize = wxSize(20 * 8, 10 * 5);
 
-	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
+	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height, cm")), inputFlags);
 
 	pSliderDangerHeight = new wxSlider(pDisplayPanel, ID_DANGERHEIGHT, 0, 0, 600,
 		wxDefaultPosition, m_sliderSize, SLIDER_STYLE);
@@ -235,7 +235,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	wxBoxSizer* rowOrientationShipInfo = new wxBoxSizer(wxVERTICAL);
 	boxShipInfo->Add(rowOrientationShipInfo);
 
-	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height")), inputFlags);
+	rowOrientationShipInfo->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Danger Height, cm")), inputFlags);
 
 	pShipDangerHeight = new wxSpinCtrl(pDisplayPanel, ID_SHIPDANGERHEIGHT, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 600, 0);
 	rowOrientationShipInfo->Add(pShipDangerHeight, verticalInputFlags);

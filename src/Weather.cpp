@@ -351,7 +351,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	}
 
 	if (is_downloaded) {
-		std::string str = "                                   " + route->GetName() + "                                                                         " + std::to_string(sum_time) + errors;
+		std::string str = "                                   " + route->GetName() + "                                                                         time: " + std::to_string(sum_time) + errors;
 		//	wxString msg = "               CHECK ROUTE";
 		wxString msg(str);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
