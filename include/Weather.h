@@ -14,6 +14,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include <cmath>
 #include <list>
 #include <deque>
+#include <queue>
 #include <iostream>
 #include <fstream>
 #include <regex>
@@ -80,6 +81,7 @@ private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
+	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	std::vector<PointWeatherData> get_all_weather_data(const std::string& path);
@@ -98,8 +100,14 @@ private:
 	void draw_path(); 
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
+	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	bool is_deep_enough(double lat, double lon);
 	double calculate_speed_koef(ChartCanvas *cc, double h);
+	bool is_in_weather_area(double lat1, double lon1);
+	bool is_in_weather_grid(int lat_ind, int lon_ind);
+	int get_lat_index(double lat);
+	int get_lon_index(double lon);
+	std::pair<int, double> get_time_shift(double time);
 
 private:
 	 bool is_downloaded = false;

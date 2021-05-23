@@ -426,14 +426,323 @@ void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 		hi_colour, transparency);
 }
 
+void Weather::print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
+	wxPoint r;
+	wxRect hilitebox;
+
+	cc->GetCanvasPointPix(lat, lon, &r);
+
+	wxPen *pen;
+	pen = g_pRouteMan->GetRoutePointPen();
+
+	int sx2 = 2;
+	int sy2 = 2;
+
+	wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
+
+	hilitebox = r1;
+	hilitebox.x -= r.x;
+	hilitebox.y -= r.y;
+
+	float radius;
+	hilitebox.Inflate(4);
+	radius = 1.0f;
+
+	unsigned char transparency = 200;
+
+	int red, green, blue;
+	green = 165;
+	red = 255;
+	blue = 0;
+
+	wxColour hi_colour(red, green, blue, 255);
+	//wxColour hi_colour = pen->GetColour();
+
+
+	//  Highlite any selected point
+	AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+		hi_colour, transparency);
+}
+
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+
+
+	if (cc->GetShipSpeed() <= 0) { return; }
+	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
+	if ((cc->GetStartTime() == "no data") || cc->GetStartTime() == "") return;
+
+	for (wxRouteListNode *node = pRouteList->GetFirst();
+		node; node = node->GetNext()) {
+		Route *pRouteDraw = node->GetData();
+
+		if (!pRouteDraw)
+			continue;
+
+		/* defer rendering active routes until later */
+		if (pRouteDraw->IsActive() || pRouteDraw->IsSelected())
+			continue;
+
+		/* defer rendering routes being edited until later */
+		if (pRouteDraw->m_bIsBeingEdited)
+			continue;
+
+		if (pRouteDraw->pRoutePointList->empty()) continue;
+
+		LLBBox weather_grid{};
+		weather_grid.Set(lat_min, lon_min, lat_max, lon_max);
+
+		if (weather_grid.IntersectOut(pRouteDraw->GetBBox())) continue;
+
+		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
+
+		find_fast_route(cc, dc, VP, box, pRouteDraw);
+	}
+
 	if (is_downloaded) {
-		wxString msg = "\n               CALCULATE ROUTE";
+		wxString msg = "\n               CALCULATE ROUTE" + std::to_string(2147483647 * 2);
 		wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
 		dc.SetFont(*g_pFontSmall);
 		wxColour cl = wxColour(61, 61, 204, 255);
 		dc.SetTextForeground(cl);
 		dc.DrawText(msg, 10, 10);
+	}
+}
+
+bool Weather::is_in_weather_area(double lat1, double lon1) {
+	if ((lat1 >= lat_min) && (lat1 <= lat_max) && (lon1 >= lon_min) && (lon1 <= lon_max)) {
+		return true;
+	}
+	return false;
+}
+
+int Weather::get_lat_index(double lat) {
+	lat = std::round(lat * 10) / 10;
+	return (lat - lat_min) * 10;
+}
+
+int Weather::get_lon_index(double lon) {
+	lon = std::round(lon * 10) / 10;
+	return (lon - lon_min) * 10;
+}
+
+bool Weather::is_in_weather_grid(int lat_ind, int lon_ind) {
+	if (lat_ind < 0 || lon_ind < 0) return false;
+	if (lat_ind >= grid_data[0].second.size()) return false;
+	if (lon_ind >= grid_data[0].second[0].size()) return false;
+
+	return true;
+}
+
+std::pair<int, double> Weather::get_time_shift(double time) {
+	int plus_index = time / (60 * 60 * 3);
+	double shifted = time - (60 * 60 * 3) * plus_index;
+	return { plus_index, shifted };
+}
+
+
+void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route) {
+
+	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
+	RoutePoint *start = node_start->GetData();
+
+	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
+	RoutePoint *finish = node_finish->GetData();
+
+	if (!is_in_weather_area(start->m_lat, start->m_lon)) return;
+	if (!is_in_weather_area(finish->m_lat, finish->m_lon)) return;
+
+	double v_nominal = cc->GetShipSpeed();
+
+	double start_time_three_hours = cc->GetStartTimeThreeHours();
+	std::vector<std::string> all_choices = GetChoicesDateTime();
+	std::sort(all_choices.begin(), all_choices.end());
+
+	std::string start_time = cc->GetStartTime();
+	int ind_start_time = -1;
+	for (int i = 0; i < grid_data.size(); i++) {
+		if (grid_data[i].first == start_time) {
+			ind_start_time = i;
+			break;
+		}
+	}
+
+
+	double start_grid_lat = std::round(start->m_lat * 10) / 10;
+	double start_grid_lon = std::round(start->m_lon * 10) / 10;
+	double finish_grid_lat = std::round(finish->m_lat * 10) / 10;
+	double finish_grid_lon = std::round(finish->m_lon * 10) / 10;
+
+
+	const double INF = 2147483647;
+	std::vector<std::vector<double>> D;//lat --- lon
+	//std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> q;
+	std::priority_queue<std::pair<double, std::pair<int, int>>, std::vector<std::pair<double, std::pair<int, int>>>, std::greater<std::pair<double, std::pair<int, int>>>> q;
+
+	int lat_size = (lat_max - lat_min) * 10 + 1;
+	int lon_size = (lon_max - lon_min) * 10 + 1;
+
+	for (int j = 0; j < lat_size; j++) {
+		std::vector<double> temp;
+		D.push_back(temp);
+		D[D.size() - 1].resize(lon_size, INF);
+	}
+
+	int start_lat_ind = get_lat_index(start_grid_lat);
+	int start_lon_ind = get_lon_index(start_grid_lon);
+	int finish_lat_ind = get_lat_index(finish_grid_lat);
+	int finish_lon_ind = get_lon_index(finish_grid_lon);
+	D[start_lat_ind][start_lon_ind] = 0;
+	
+	q.push({ 0, {start_lat_ind, start_lon_ind} });
+
+	while (!q.empty()) {
+		std::pair<double, std::pair<int, int>>  p = q.top();
+		q.pop();
+		if (p.second.first == finish_lat_ind && p.second.second == finish_lon_ind) break;
+
+		int now_lat_ind = p.second.first;
+		int now_lon_ind = p.second.second;
+		double now_weight = p.first;
+
+		if (now_weight > D[now_lat_ind][now_lon_ind]) { continue; }
+
+		for (int i = -1; i <= 1; i++) {
+			for (int j = -1; j <= 1; j++) {
+				if (i == 0 && j == 0) continue;
+				int next_lat = now_lat_ind + i;
+				int next_lon = now_lon_ind + j;
+				if (!is_in_weather_grid(next_lat,next_lon)) continue;
+				if (D[next_lat][next_lon] <= D[now_lat_ind][now_lon_ind]) continue;
+
+				double way = std::sqrt((double)(i * i + j * j));
+
+				/////
+				//first half
+				std::pair<int, double> times_for_now = get_time_shift(now_weight + start_time_three_hours);
+				if (times_for_now.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string now_str_time = all_choices[times_for_now.first + ind_start_time];
+				if (now_str_time == "" || now_str_time == "no data") continue;
+
+				int ind_now_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == now_str_time) {
+						ind_now_time = i;
+						break;
+					}
+				}
+				PointWeatherData now_square = grid_data[ind_now_time].second[now_lat_ind][now_lon_ind];
+				if (now_square.creation_time == "-1") continue;
+				double sum_waves = now_square.wave_height + now_square.ripple_height;
+				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+					continue;
+				}
+
+				double v_first_half = v_nominal * calculate_speed_koef(cc, sum_waves);
+
+				double time_half_way = (way / 2) / v_first_half;
+
+				/////
+				//second half
+				std::pair<int, double> times_for_half_way = get_time_shift(now_weight + start_time_three_hours + time_half_way);
+				if (times_for_half_way.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string half_way_str_time = all_choices[times_for_half_way.first + ind_start_time];
+				if (half_way_str_time == "" || half_way_str_time == "no data") continue;
+
+				int ind_half_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == half_way_str_time) {
+						ind_half_time = i;
+						break;
+					}
+				}
+				PointWeatherData half_square = grid_data[ind_half_time].second[next_lat][next_lon];
+				if (half_square.creation_time == "-1") continue;
+				double sum_waves_half = half_square.wave_height + half_square.ripple_height;
+				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+					continue;
+				}
+				double v_second_half = v_nominal * calculate_speed_koef(cc, sum_waves_half);
+				double time_second_half_way = (way / 2) / v_second_half;
+
+				/////
+				//finish check
+				std::pair<int, double> times_for_whole_way = get_time_shift(now_weight + start_time_three_hours + time_half_way + time_second_half_way);
+				if (times_for_whole_way.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string whole_way_str_time = all_choices[times_for_whole_way.first + ind_start_time];
+				if (whole_way_str_time == "" || whole_way_str_time == "no data") continue;
+
+				int ind_whole_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == whole_way_str_time) {
+						ind_whole_time = i;
+						break;
+					}
+				}
+				PointWeatherData whole_square = grid_data[ind_whole_time].second[next_lat][next_lon];
+				if (whole_square.creation_time == "-1") continue;
+				double sum_waves_whole = whole_square.wave_height + whole_square.ripple_height;
+				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+					continue;
+				}
+				
+				///  все проверки пройдены, осталось обновить очередь и внести новые данные в массив
+
+				double time_to_next = now_weight + time_half_way + time_second_half_way;
+				if (time_to_next < D[next_lat][next_lon]) {
+					D[next_lat][next_lon] = time_to_next;
+					q.push({ time_to_next, {next_lat, next_lon} });
+				}
+			}
+		}
+	}
+
+	if (D[finish_lat_ind][finish_lon_ind] < INF - 1) {
+		std::vector<std::pair<int, int>> path;
+		path.push_back({ finish_lat_ind, finish_lon_ind });
+		int lat_ind_path = finish_lat_ind;
+		int lon_ind_path = finish_lon_ind;
+
+		while (lat_ind_path != start_lat_ind || lon_ind_path != start_lon_ind) {
+			double min = INF;
+			int lat_min_ind = -1;
+			int lon_min_ind = -1;
+			for (int i = -1; i <= 1; i++) {
+				for (int j = -1; j <= 1; j++) {
+					if (i == 0 && j == 0) continue;
+					int next_lat = lat_ind_path + i;
+					int next_lon = lon_ind_path + j;
+					if (!is_in_weather_grid(next_lat, next_lon)) continue;
+					if (D[next_lat][next_lon] <= min) {
+						min = D[next_lat][next_lon];
+						lat_min_ind = next_lat;
+						lon_min_ind = next_lon;
+					}
+				}
+			}
+			path.push_back({ lat_min_ind, lon_min_ind });
+			lat_ind_path = lat_min_ind;
+			lon_ind_path = lon_min_ind;
+		}
+
+		for (int i = 0; i < path.size(); i++) {
+			//print_path_step(cc, dc,VP, box, path[i].first, path[i].second);
+			print_path_step(cc, dc, VP, box, lat_min + ((double)path[i].first)/10, lon_min + ((double)path[i].second)/10);
+		}
+
+		if (is_downloaded) {
+			wxString msg = "\n               CALCULATE ROUTE   " + std::to_string((D[finish_lat_ind][finish_lon_ind]));
+			wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+			dc.SetFont(*g_pFontSmall);
+			wxColour cl = wxColour(61, 61, 204, 255);
+			dc.SetTextForeground(cl);
+			dc.DrawText(msg, 10, 10);
+		}
 	}
 }
 
