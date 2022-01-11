@@ -22,11 +22,11 @@ Weather::Weather()
 	//Weather::download_weather_from_esimo();
 
 
-	////data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
-	////data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+	////data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
+	////data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\lena_test_data.csv");
 
-	////get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\data_diff_days.csv");
-	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+	////get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\data_diff_days.csv");
+	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\lena_test_data.csv");
 	//
 	////data = date_data[0].second;
 	//if (data.size() > 0) {
@@ -38,14 +38,14 @@ Weather::Weather()
 	//dijstra test
 
 
-	//data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
-	//data = get_all_weather_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+	//data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
+	//data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\lena_test_data.csv");
 
-	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\data_diff_days.csv");
-	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv");
+	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\data_diff_days.csv");
+	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\lena_test_data.csv");
 
-	//get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\clean_data.csv");
-	get_all_weather_date_data("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\3three_data.csv");
+	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
+	get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\test_data.csv");
 	create_data_grid();
 
 	//data = date_data[0].second;
@@ -120,6 +120,12 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 
 	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
 	RoutePoint *prp2 = node->GetData();
+
+	ChartBase *chart = cc->GetChartAtCursor();
+	s57chart *s57ch = NULL;
+	if (chart) {
+		s57ch = dynamic_cast<s57chart*>(chart);
+	}
 
 	double sum_time = 0;//в часах
 	double v_nominal = cc->GetShipSpeed();//////////////IMPLEMENT
@@ -196,9 +202,22 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		
 
 		while (((std::round(prev_grid_lat * 10)) != std::round(lat_finish * 10)) || (std::round(prev_grid_lon * 10) != std::round(lon_finish * 10))) {
-
+			if (prev_grid_lat < 0 || prev_grid_lon < 0 || prev_grid_lat > lat_max || prev_grid_lon > lon_max)
+				break;
 			double sum_waves = -1;
 			v = -1;
+
+			print_error_zone(cc, dc, VP, box, prev_grid_lat, prev_grid_lon, wxColour(255, 0, 0, 255));
+
+			/*ListOfObjRazRules * map_areas = get_objects_at_lat_lon(prev_lat, prev_lon, s57ch, &VP, MASK_AREA);
+			ListOfObjRazRules * map_objects = get_objects_at_lat_lon(prev_lat, prev_lon, s57ch, &VP, MASK_ALL - MASK_AREA);
+			if (is_land_area(map_areas, s57ch)) {
+				print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(255, 0, 0, 255));
+			}
+			else
+			is deep enough
+			*/
+
 			//check for waves and others
 			if (now_time != "no data" && now_time != "") {
 				if ((prev_grid_lat >= lat_min) && (prev_grid_lat <= lat_max) && (prev_grid_lon >= lon_min) && (prev_grid_lon <= lon_max)) {
@@ -218,7 +237,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 					if (now_square.creation_time != "-1") {
 						sum_waves = now_square.wave_height + now_square.ripple_height;
 						v = v_nominal * calculate_speed_koef(cc, sum_waves);
-						if (sum_waves > ((double)cc->GetShipDangerHeight())/100 || !is_deep_enough(prev_lat, prev_lon)) {
+						if (sum_waves > ((double)cc->GetShipDangerHeight())/100) {
 							std::string temp = "huge wave:" + std::to_string(sum_waves) + " in " + std::to_string(prev_lat) + " " + std::to_string(prev_lon);
 							errors += temp + "\n";
 
@@ -287,6 +306,11 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 					delta_lat = to_next_lon * sin / cos;
 				}
 			}
+
+			if (check_depth_in_cone(s57ch, VP, prev_lat, prev_lon, delta_lat, delta_lon)) {
+				print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(255, 0, 0, 255));
+			}
+
 			if (norm_lat > 0) {
 				prev_lat += delta_lat;
 				if (is_lat_step) {
@@ -302,6 +326,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 				}
 			}
 
+
 			if (norm_lon > 0) {
 				prev_lon += delta_lon;
 				if (!is_lat_step) {
@@ -316,6 +341,9 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 					//if (0.1 + prev_grid_lon < lon_finish) break;
 				}
 			}
+
+			
+
 			sum_time += std::min(lat_time, lon_time);
 			//написать поддержку нужного времени - добавл€ть врем€ и перекидывать на другой индекс
 			now_time_three_hours += std::min(lat_time, lon_time);
@@ -343,13 +371,9 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 				now_time_three_hours -= spin * 3;
 			}
 		}
-
 		double finishing_distance = sqrt((lon2 - prev_lon)*(lon2 - prev_lon) + (lat2 - prev_lat)*(lat2 - prev_lat));
 		sum_time += finishing_distance / v;
-
-		
 	}
-
 	if (is_downloaded) {
 		std::string str = "                                   " + route->GetName() + "                                                                         time: " + std::to_string(sum_time) + errors;
 		//	wxString msg = "               CHECK ROUTE";
@@ -362,6 +386,10 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	}
 }
 
+bool Weather::check_depth_in_cone(s57chart* chart, ViewPort VP, double prev_lat, double prev_lon, double delta_lat, double delta_lon){
+	return false;
+}
+
 double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
 	double N, D, L, delta;
 	N = cc->GetShipN();
@@ -371,7 +399,9 @@ double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
 	if (N == 0 || D == 0 || L == 0 || delta == 0) {
 		return 1;
 	}
-
+	if ((N / D) > 1.143 / 1.425) {
+		return 1;
+	}
 	double g, g1, g2, g3;
 	g1 = std::pow((N / D), -1.14) - 2;
 	g2 = std::pow((delta/(1.143 - 1.425 * N / D)), 4.7);
@@ -381,16 +411,125 @@ double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
 	if (k > 1 || k <= 0) {
 		k = 1;
 	}
+	
 	return k;
 }
 
-bool Weather::is_deep_enough(double lat, double lon) {
-	return true;
+bool Weather::is_land_area(ListOfObjRazRules *list, s57chart *chart) {
+	std::string land_area_attribute = "LNDARE";
+	if (list == NULL) {
+		return false;
+	}
+	if (list->GetCount() == 0) {
+		return false;
+	}
+	for (ListOfObjRazRules::Node *node = list->GetLast(); node; node = node->GetPrevious()) {
+		ObjRazRules *current = node->GetData();
+		if (current == NULL || current->obj == NULL) continue;
+		if (current->obj->Primitive_type == GEO_META) continue;
+		if (current->obj->Primitive_type == GEO_PRIM) continue;
+		bool isLight = !strcmp(current->obj->FeatureName, "LIGHTS");
+		if (isLight) continue;
+
+		wxString curAttrName;
+		std::string featureName = std::string(current->obj->FeatureName);
+		if (featureName.find(land_area_attribute) != std::string::npos)
+			return true;
+		if (current->obj->att_array) {
+			char *curr_att = current->obj->att_array;
+			int attrCounter = 0;
+			while (attrCounter < current->obj->n_attr) {
+				curAttrName = wxString(curr_att, wxConvUTF8, 6);
+				wxString value = chart->GetObjectAttributeValueAsString(current->obj, attrCounter, curAttrName);
+				if (value.Contains(land_area_attribute))
+					return true;
+				attrCounter++;
+				curr_att += 6;
+			}
+		}
+	}
+	return false;
 }
 
-void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
+ListOfObjRazRules * Weather::get_objects_at_lat_lon(double lat, double lon, s57chart* chart, ViewPort *VP, int mask) {
+	int sel_rad_pix = 5;
+	float select_radius = sel_rad_pix / (VP->view_scale_ppm * 1852 * 60);
+	ListOfObjRazRules *list = NULL;
+	wxString allValues;
+	if (chart) {
+		list = chart->GetObjRuleListAtLatLon(lat, lon, select_radius, VP, mask);
+	}
+	/*if (list != NULL) {
+		wxString allValues;
+		allValues.Append(std::to_string(lat));
+		allValues.Append(", ");
+		allValues.Append(std::to_string(lon));
+		allValues.Append(" count ");
+		allValues.Append(std::to_string((int)list->GetCount()));
+		allValues.Append("\n");
+		std::ofstream myfile;
+		std::string lat_lon = std::to_string(lat) + std::to_string(lon);
+		myfile.open("C:\\Users\\gosha\\Documents\\GitHub\\openCPN_temp\\output" + lat_lon + ".txt", std::ofstream::app);
+		myfile << allValues.ToStdString();
+		myfile.close();
+	}*/
+	return list;
+}
+
+bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart) {
+	if (list == NULL) {
+		return false;
+	}
+	if (list->GetCount() == 0) {
+		return false;
+	}
+	wxString allValues;
+	for (ListOfObjRazRules::Node *node = list->GetLast(); node; node = node->GetPrevious()) {
+		ObjRazRules *current = node->GetData();
+		if (current == NULL || current->obj == NULL) continue;
+		if (current->obj->Primitive_type == GEO_META) continue;
+		if (current->obj->Primitive_type == GEO_PRIM) continue;
+		bool isLight = !strcmp(current->obj->FeatureName, "LIGHTS");
+		if (isLight) continue;
+
+		wxString curAttrName;
+		std::string featureName = std::string(current->obj->FeatureName);
+		allValues.Append(featureName);
+		allValues.Append(" == ");
+		if (current->obj->att_array) {
+			char *curr_att = current->obj->att_array;
+			int attrCounter = 0;
+			while (attrCounter < current->obj->n_attr) {
+				curAttrName = wxString(curr_att, wxConvUTF8, 6);
+				wxString value = chart->GetObjectAttributeValueAsString(current->obj, attrCounter, curAttrName);
+				allValues.Append(curAttrName);
+				allValues.Append(" : ");
+				allValues.Append(value);
+				allValues.Append(", ");
+				attrCounter++;
+				curr_att += 6;
+			}
+		}
+		allValues.Append("\n");
+	}
+	std::ofstream myfile;
+	myfile.open("C:\\Users\\gosha\\Documents\\GitHub\\openCPN_temp\\output.txt", std::ofstream::app);
+	myfile << allValues.ToStdString();
+	myfile.close();
+	return false;
+}
+
+bool Weather::is_same_colour(wxColour first, wxColour second) {
+	return (first.Alpha() == second.Alpha()) &&
+		(first.Red() == second.Red()) &&
+		(first.Blue() == second.Blue()) &&
+		(first.Green() == second.Green());
+}
+
+void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour fill_colour) {
 	wxPoint r;
 	wxRect hilitebox;
+	wxColour default_colour = wxColour(0,0,0,0);
 
 	cc->GetCanvasPointPix(lat, lon, &r);
 
@@ -412,18 +551,25 @@ void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 
 	unsigned char transparency = 200;
 
-	int red, green, blue;
-	green = 0;
-	red = 135;
-	blue = 135;
-
-	wxColour hi_colour(red, green, blue, 255);
 	//wxColour hi_colour = pen->GetColour();
-
-
 	//  Highlite any selected point
+
+	/*if (!is_same_colour(fill_colour, default_colour)) {
+		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+			fill_colour, transparency);
+	}
+	else {
+		int red, green, blue;
+		green = 0;
+		red = 135;
+		blue = 135;
+		wxColour hi_colour(red, green, blue, 255);
+		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+			hi_colour, transparency);
+	}*/
 	AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
-		hi_colour, transparency);
+		fill_colour, transparency);
+
 }
 
 void Weather::print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
@@ -1180,7 +1326,7 @@ bool Weather::download_weather_from_esimo() {
 	curl_global_init(CURL_GLOBAL_ALL);
 	curl = curl_easy_init();
 	if (curl) {
-		fp = fopen("C:\\Users\\Admin\\Sources\\OpenCPN\\Weather\\lena_test_data.csv", "wb");
+		fp = fopen("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\test_data.csv", "wb");
 		//fp = fopen("C:\\Users\\Admin\\Desktop\\TEST\\lena_test_data.csv", "wb");
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 		curl_easy_setopt(curl, CURLOPT_URL, "http://esimo.ru/dataview/getresourceexport");
