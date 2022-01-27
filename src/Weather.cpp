@@ -1,7 +1,7 @@
 #include "wx/wxprec.h"
 
 #include "Weather.h"
-
+#include "weather_utils.h"
 #include "routeman.h"
 #include "navutil.h"
 #include "chcanv.h"
@@ -16,6 +16,7 @@ extern float        g_ChartScaleFactorExp;
 extern RouteList        *pRouteList;
 extern TrackList        *pTrackList;
 
+//using namespace WeatherUtils;
 Weather::Weather()
 {
 
@@ -62,7 +63,7 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	draw_gradient(cc, dc, VP, box);
+	//draw_gradient(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
 	}
@@ -141,6 +142,15 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	std::sort(all_choices.begin(), all_choices.end());
 	std::string errors = "\n\n\n";
 
+
+	//std::string str = std::to_string(VP.view_scale_ppm);
+	//wxString msg(str);
+	//wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
+	//dc.SetFont(*g_pFontSmall);
+	//wxColour cl = wxColour(61, 61, 204, 255);
+	//dc.SetTextForeground(cl);
+	//dc.DrawText(msg, 100, 100);
+
 	for (node = node->GetNext(); node; node = node->GetNext()) {
 		RoutePoint *prp1 = prp2;
 		prp2 = node->GetData();
@@ -199,21 +209,18 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		double prev_grid_lat = lat_start;
 		double prev_grid_lon = lon_start;
 
-		
-
 		while (((std::round(prev_grid_lat * 10)) != std::round(lat_finish * 10)) || (std::round(prev_grid_lon * 10) != std::round(lon_finish * 10))) {
 			if (prev_grid_lat < 0 || prev_grid_lon < 0 || prev_grid_lat > lat_max || prev_grid_lon > lon_max)
 				break;
 			double sum_waves = -1;
 			v = -1;
-
-			print_error_zone(cc, dc, VP, box, prev_grid_lat, prev_grid_lon, wxColour(255, 0, 0, 255));
-
+			//print_error_zone(cc, dc, VP, box, prev_grid_lat, prev_grid_lon, wxColour(255, 0, 0, 255));
+			//print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(0, 125, 125, 255));
+			//ListOfObjRazRules * map_objects = get_objects_at_lat_lon(prev_lat, prev_lon, s57ch, &VP, MASK_ALL - MASK_AREA);
+			//if (is_land_area(map_objects, s57ch)) {
+			//	print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(255, 0, 0, 255));
+			//}
 			/*ListOfObjRazRules * map_areas = get_objects_at_lat_lon(prev_lat, prev_lon, s57ch, &VP, MASK_AREA);
-			ListOfObjRazRules * map_objects = get_objects_at_lat_lon(prev_lat, prev_lon, s57ch, &VP, MASK_ALL - MASK_AREA);
-			if (is_land_area(map_areas, s57ch)) {
-				print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(255, 0, 0, 255));
-			}
 			else
 			is deep enough
 			*/
@@ -306,10 +313,20 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 					delta_lat = to_next_lon * sin / cos;
 				}
 			}
+			double next_lat = norm_lat > 0 ? prev_lat + delta_lat : prev_lat - delta_lat;
+			double next_lon = norm_lon > 0 ? prev_lon + delta_lon : prev_lon - delta_lon;
 
-			if (check_depth_in_cone(s57ch, VP, prev_lat, prev_lon, delta_lat, delta_lon)) {
-				print_error_zone(cc, dc, VP, box, prev_lat, prev_lon, wxColour(255, 0, 0, 255));
-			}
+			wxPoint2DDouble start = wxPoint2DDouble(prev_lat, prev_lon);
+			wxPoint2DDouble end = wxPoint2DDouble(next_lat, next_lon);
+			double angle = calculate_cone_angle(v);
+			wxPoint2DDouble end_rot1 = WeatherUtils::rotate_vector_around_first_point(start, end, angle);
+			wxPoint2DDouble end_rot2 = WeatherUtils::rotate_vector_around_first_point(start, end, -angle);
+			// рисуем конус до следующей точки, угол в зависимости от скорости (симметрично относительно пути)
+			draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot1.m_x, end_rot1.m_y, wxColour(255, 0, 0, 255));
+			draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot2.m_x, end_rot2.m_y, wxColour(255, 0, 0, 255));
+			// проверяем внутри него объекты на глубину
+			
+			check_depth_in_cone(s57ch, cc, dc, VP, box, start, end);
 
 			if (norm_lat > 0) {
 				prev_lat += delta_lat;
@@ -386,8 +403,28 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	}
 }
 
-bool Weather::check_depth_in_cone(s57chart* chart, ViewPort VP, double prev_lat, double prev_lon, double delta_lat, double delta_lon){
-	return false;
+void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end){
+	// начальное значение радиуса для поиска объектов
+	float draft_in_ft = 90; // unit of measurement. - ft. // единицы измерения - футы
+	double r = 1e-4;
+	double angle = 0.017;
+	double tan = std::tan(angle);
+	wxPoint2DDouble step = WeatherUtils::step_for_way(start, end, r);
+	// цикл с некоторым шагом по пути движения
+	for (wxPoint2DDouble point = start - step; point.GetDistance(end) >= r;  point += step) {
+		// получение объектов в радиусе
+		r += tan * step.GetDistance(wxPoint2DDouble(0, 0)); // тангенс угла
+		step = step * (1.0f + tan);
+		auto select_objects = get_objects_at_lat_lon(point.m_x, point.m_y, r, chart, &VP, MASK_ALL-MASK_AREA);
+		if (select_objects->Number() == 0)
+			continue;
+
+		if (!is_deep_enough(select_objects, chart, draft_in_ft)) {
+			print_error_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+		}
+
+	}
+	return;
 }
 
 double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
@@ -413,6 +450,13 @@ double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
 	}
 	
 	return k;
+}
+
+// @param v speed in knots
+// returns angle in radian
+double Weather::calculate_cone_angle(double v) {
+	const double k = 0.157 / 5; //соотношение скорости и отклонения
+	return v * k;
 }
 
 bool Weather::is_land_area(ListOfObjRazRules *list, s57chart *chart) {
@@ -451,13 +495,12 @@ bool Weather::is_land_area(ListOfObjRazRules *list, s57chart *chart) {
 	return false;
 }
 
-ListOfObjRazRules * Weather::get_objects_at_lat_lon(double lat, double lon, s57chart* chart, ViewPort *VP, int mask) {
-	int sel_rad_pix = 5;
-	float select_radius = sel_rad_pix / (VP->view_scale_ppm * 1852 * 60);
+ListOfObjRazRules * Weather::get_objects_at_lat_lon(double lat, double lon, double select_rad, s57chart* chart, ViewPort *VP, int mask) {
+	//float select_radius = select_rad_pix;// / (VP->view_scale_ppm * 1852 * 60);
 	ListOfObjRazRules *list = NULL;
 	wxString allValues;
 	if (chart) {
-		list = chart->GetObjRuleListAtLatLon(lat, lon, select_radius, VP, mask);
+		list = chart->GetObjRuleListAtLatLon(lat, lon, select_rad, VP, mask);
 	}
 	/*if (list != NULL) {
 		wxString allValues;
@@ -476,7 +519,7 @@ ListOfObjRazRules * Weather::get_objects_at_lat_lon(double lat, double lon, s57c
 	return list;
 }
 
-bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart) {
+bool Weather::print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart) {
 	if (list == NULL) {
 		return false;
 	}
@@ -517,6 +560,50 @@ bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart) {
 	myfile << allValues.ToStdString();
 	myfile.close();
 	return false;
+}
+
+// @param draft - осадка судна
+bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart, float draft) {
+	if (list == NULL) {
+		return false;
+	}
+	if (list->GetCount() == 0) {
+		return false;
+	}
+	// проверка атрибутов на наличие глубины (скалы/ области мелей / другие одиночные объекты с глубиной)
+	// VALDCO - для depth contour, VALSOU - для остальных
+	for (ListOfObjRazRules::Node *node = list->GetLast(); node; node = node->GetPrevious()) {
+		ObjRazRules *current = node->GetData();
+		if (current == NULL || current->obj == NULL) continue;
+		if (current->obj->Primitive_type == GEO_META) continue;
+		if (current->obj->Primitive_type == GEO_PRIM) continue;
+		// пока не знаю, надо ли их исключать
+		bool isLight = !strcmp(current->obj->FeatureName, "LIGHTS");
+		if (isLight) continue;
+
+		wxString curAttrName;
+		std::string featureName = std::string(current->obj->FeatureName);
+		if (current->obj->att_array) {
+			char *curr_att = current->obj->att_array;
+			int attrCounter = 0;
+			while (attrCounter < current->obj->n_attr) {
+				curAttrName = wxString(curr_att, wxConvUTF8, 6);
+				if (curAttrName != "VALSOU") {
+					attrCounter++;
+					curr_att += 6;
+					continue;
+				}
+				wxString value = chart->GetObjectAttributeValueAsString(current->obj, attrCounter, curAttrName);
+				float depth_value = atof(value.c_str());
+				if (depth_value < draft) {
+					return false;
+				}
+				attrCounter++;
+				curr_att += 6;
+			}
+		}
+	}
+	return true;
 }
 
 bool Weather::is_same_colour(wxColour first, wxColour second) {
@@ -569,7 +656,88 @@ void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 	}*/
 	AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
 		fill_colour, transparency);
+}
 
+void Weather::draw_line_on_map(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double start_lat, double start_lon, double end_lat, double end_lon, wxColour color) {
+	int transparency = 255;
+	wxDC *pdc = dc.GetDC();
+	wxPoint p_start;
+	wxPoint p_end;
+	cc->GetCanvasPointPix(start_lat, start_lon, &p_start);
+	cc->GetCanvasPointPix(end_lat, end_lon, &p_end);
+	int x = p_start.x;
+	int y = p_start.y;
+	double size_x = std::abs(p_end.x - p_start.x);
+	double size_y = std::abs(p_end.y - p_start.y);
+	if (pdc) {
+		
+		//    Get wxImage of area of interest
+		wxBitmap obm(size_x, size_y);
+		wxMemoryDC mdc1;
+		mdc1.SelectObject(obm);
+		mdc1.Blit(0, 0, size_x, size_y, pdc, x, y);
+		mdc1.SelectObject(wxNullBitmap);
+		wxImage oim = obm.ConvertToImage();
+
+		//    Create destination image
+		wxBitmap olbm(size_x, size_y);
+		wxMemoryDC oldc(olbm);
+		if (!oldc.IsOk())
+			return;
+
+		oldc.SetBackground(*wxBLACK_BRUSH);
+		oldc.SetBrush(*wxWHITE_BRUSH);
+		oldc.Clear();
+
+		oldc.DrawLine(0, 0, size_x, size_y);
+
+		wxImage dest = olbm.ConvertToImage();
+		unsigned char *dest_data = (unsigned char *)malloc(
+			size_x * size_y * 3 * sizeof(unsigned char));
+		unsigned char *bg = oim.GetData();
+		unsigned char *box = dest.GetData();
+		unsigned char *d = dest_data;
+
+		//  Sometimes, on Windows, the destination image is corrupt...
+		if (NULL == box)
+		{
+			free(d);
+			return;
+		}
+		float alpha = 1.0 - (float)transparency / 255.0;
+		int sb = size_x * size_y;
+		for (int i = 0; i < sb; i++) {
+			float a = alpha;
+			if (*box == 0) a = 1.0;
+			int r = ((*bg++) * a) + (1.0 - a) * color.Red();
+			*d++ = r; box++;
+			int g = ((*bg++) * a) + (1.0 - a) * color.Green();
+			*d++ = g; box++;
+			int b = ((*bg++) * a) + (1.0 - a) * color.Blue();
+			*d++ = b; box++;
+		}
+
+		dest.SetData(dest_data);
+
+		//    Convert destination to bitmap and draw it
+		wxBitmap dbm(dest);
+		dc.DrawBitmap(dbm, x, y, false);
+
+		// on MSW, the dc Bounding box is not updated on DrawBitmap() method.
+		// Do it explicitely here for all platforms.
+		dc.CalcBoundingBox(x, y);
+		dc.CalcBoundingBox(x + size_x, y + size_y);
+	}
+	else {
+#ifdef ocpnUSE_GL
+		/* opengl version */
+		glEnable(GL_BLEND);
+		wxColour c(color.Red(), color.Green(), color.Blue(), transparency);
+		dc.SetPen(wxPen(c, 2));
+		dc.DrawLine(p_start.x, p_start.y, p_end.x, p_end.y);
+		glDisable(GL_BLEND);
+#endif
+	}
 }
 
 void Weather::print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
@@ -781,7 +949,7 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				PointWeatherData now_square = grid_data[ind_now_time].second[now_lat_ind][now_lon_ind];
 				if (now_square.creation_time == "-1") continue;
 				double sum_waves = now_square.wave_height + now_square.ripple_height;
-				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 ){//|| !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
 					continue;
 				}
 
@@ -808,7 +976,7 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				PointWeatherData half_square = grid_data[ind_half_time].second[next_lat][next_lon];
 				if (half_square.creation_time == "-1") continue;
 				double sum_waves_half = half_square.wave_height + half_square.ripple_height;
-				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100){// || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
 					continue;
 				}
 				double v_second_half = v_nominal * calculate_speed_koef(cc, sum_waves_half);
@@ -833,7 +1001,7 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				PointWeatherData whole_square = grid_data[ind_whole_time].second[next_lat][next_lon];
 				if (whole_square.creation_time == "-1") continue;
 				double sum_waves_whole = whole_square.wave_height + whole_square.ripple_height;
-				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100 || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100){// || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
 					continue;
 				}
 				

@@ -99,17 +99,19 @@ private:
 
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
-	void draw_path(); 
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	//bool is_deep_enough(double lat, double lon);
-	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart);
-	bool check_depth_in_cone(s57chart* chart, ViewPort VP, double prev_lat, double prev_lon, double delta_lat, double delta_lon);
+	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
+	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
+	void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
+	void draw_line_on_map(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double start_lat, double start_lon, double end_lat, double end_lon, wxColour color);
 	bool is_land_area(ListOfObjRazRules *list, s57chart * chart);
 	bool is_same_colour(wxColour first, wxColour second);
-	ListOfObjRazRules * get_objects_at_lat_lon(double lat, double lon, s57chart* chart, ViewPort *VP, int mask = MASK_ALL);
+	ListOfObjRazRules * get_objects_at_lat_lon(double lat, double lon, double select_rad, s57chart* chart, ViewPort *VP, int mask = MASK_ALL);
 	double calculate_speed_koef(ChartCanvas *cc, double h);
+	double calculate_cone_angle(double v);
 	bool is_in_weather_area(double lat1, double lon1);
 	bool is_in_weather_grid(int lat_ind, int lon_ind);
 	int get_lat_index(double lat);
