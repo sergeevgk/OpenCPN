@@ -86,7 +86,6 @@ private:
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
-	std::vector<PointWeatherData> get_all_weather_data(const std::string& path);
 	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();
 	double find_min_wave_height();
@@ -97,21 +96,21 @@ private:
 	double find_min_longitude();
 	double find_max_longitude();
 
+
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
-	//bool is_deep_enough(double lat, double lon);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
+	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
 	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
+	bool is_deep_enough_area(ListOfObjRazRules *list, s57chart* chart, float draft);
 	void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
-	void draw_line_on_map(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double start_lat, double start_lon, double end_lat, double end_lon, wxColour color);
 	bool is_land_area(ListOfObjRazRules *list, s57chart * chart);
 	bool is_same_colour(wxColour first, wxColour second);
 	ListOfObjRazRules * get_objects_at_lat_lon(double lat, double lon, double select_rad, s57chart* chart, ViewPort *VP, int mask = MASK_ALL);
 	double calculate_speed_koef(ChartCanvas *cc, double h);
-	double calculate_cone_angle(double v);
 	bool is_in_weather_area(double lat1, double lon1);
 	bool is_in_weather_grid(int lat_ind, int lon_ind);
 	int get_lat_index(double lat);
@@ -120,7 +119,6 @@ private:
 
 private:
 	 bool is_downloaded = false;
-	 //std::vector<PointWeatherData> data;
 	 std::vector<std::pair<std::string, std::vector<PointWeatherData>>> date_data;
 	 std::vector <std::pair<std::string, std::vector<std::vector<PointWeatherData>>>> grid_data;//25 блоков, каждый блок - пара из времени и двумерного массива поинтов
 
