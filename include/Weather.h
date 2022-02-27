@@ -101,7 +101,7 @@ private:
 	static bool download_weather_from_esimo();
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
-	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
+	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
 	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
@@ -113,8 +113,7 @@ private:
 	double calculate_speed_koef(ChartCanvas *cc, double h);
 	bool is_in_weather_area(double lat1, double lon1);
 	bool is_in_weather_grid(int lat_ind, int lon_ind);
-	int get_lat_index(double lat);
-	int get_lon_index(double lon);
+	void highlight_considered_grid(std::vector<std::vector<int>> &grid, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	std::pair<int, double> get_time_shift(double time);
 
 private:

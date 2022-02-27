@@ -61,7 +61,7 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	//draw_gradient(cc, dc, VP, box);
+	draw_gradient(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
 	}
@@ -733,6 +733,24 @@ void Weather::print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 		hi_colour, transparency);
 }
 
+void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+	 auto route_color = wxColour(100, 0, 0, 255);
+	 auto zone_color = wxColour(200, 0, 0, 255);
+	 
+	 for (int i = 0; i < grid.size(); i++) {
+		 for (int j = 0; j < grid[0].size(); j++) {
+			 double lat = WeatherUtils::get_coordinate_from_index(i, lat_min);
+			 double lon = WeatherUtils::get_coordinate_from_index(j, lon_min);
+			 if (grid[i][j] == 0) {
+				 Weather::print_error_zone(cc, dc, VP, box, lat, lon, route_color);
+			 }
+			 if (grid[i][j] == 1) {
+				 Weather::print_error_zone(cc, dc, VP, box, lat, lon, zone_color);
+			 }
+		 }
+	 }
+}
+
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 
 
@@ -763,8 +781,11 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 		if (weather_grid.IntersectOut(pRouteDraw->GetBBox())) continue;
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
+		
+		auto considered_zone_grid = WeatherUtils::create_considered_grid_from_route(pRouteDraw, lat_min, lat_max, lon_min, lon_max);
 
-		find_fast_route(cc, dc, VP, box, pRouteDraw);
+		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
+		find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_grid);
 	}
 
 	if (is_downloaded) {
@@ -784,16 +805,6 @@ bool Weather::is_in_weather_area(double lat1, double lon1) {
 	return false;
 }
 
-int Weather::get_lat_index(double lat) {
-	lat = std::round(lat * 10) / 10;
-	return (lat - lat_min) * 10;
-}
-
-int Weather::get_lon_index(double lon) {
-	lon = std::round(lon * 10) / 10;
-	return (lon - lon_min) * 10;
-}
-
 bool Weather::is_in_weather_grid(int lat_ind, int lon_ind) {
 	if (lat_ind < 0 || lon_ind < 0) return false;
 	if (lat_ind >= grid_data[0].second.size()) return false;
@@ -809,7 +820,7 @@ std::pair<int, double> Weather::get_time_shift(double time) {
 }
 
 
-void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route) {
+void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone) {
 
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
@@ -856,10 +867,10 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 		D[D.size() - 1].resize(lon_size, INF);
 	}
 
-	int start_lat_ind = get_lat_index(start_grid_lat);
-	int start_lon_ind = get_lon_index(start_grid_lon);
-	int finish_lat_ind = get_lat_index(finish_grid_lat);
-	int finish_lon_ind = get_lon_index(finish_grid_lon);
+	int start_lat_ind = WeatherUtils::get_coordinate_index(start_grid_lat, this->lat_min);
+	int start_lon_ind = WeatherUtils::get_coordinate_index(start_grid_lon, this->lon_min);
+	int finish_lat_ind = WeatherUtils::get_coordinate_index(finish_grid_lat, this->lat_min);
+	int finish_lon_ind = WeatherUtils::get_coordinate_index(finish_grid_lon, this->lon_min);
 	D[start_lat_ind][start_lon_ind] = 0;
 	
 	q.push({ 0, {start_lat_ind, start_lon_ind} });
@@ -882,7 +893,7 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				int next_lon = now_lon_ind + j;
 				if (!is_in_weather_grid(next_lat,next_lon)) continue;
 				if (D[next_lat][next_lon] <= D[now_lat_ind][now_lon_ind]) continue;
-
+				if (considered_zone[next_lat][next_lon] == -1) continue;
 				double way = std::sqrt((double)(i * i + j * j));
 
 				/////
@@ -907,6 +918,9 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 ){//|| !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
 					continue;
 				}
+				//TODO проверка на глубину
+
+				//
 
 				double v_first_half = v_nominal * calculate_speed_koef(cc, sum_waves);
 

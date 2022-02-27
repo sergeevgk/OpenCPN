@@ -28,7 +28,7 @@ class Route;
 
 namespace WeatherUtils {
 
-#define ZONE_WIDTH 6 // ширина (в "клетках") зоны вокруг маршрута, в которой рассматриваем различные пути
+#define ZONE_WIDTH 3 // ширина (в "клетках") зоны вокруг маршрута, в которой рассматриваем различные пути
 					 // 1 клетка == 6 морских миль или 0.1 градуса
 
 	// возможно надо различать северное и южное полушария чтобы поворачивать в нужную сторону
@@ -44,7 +44,12 @@ namespace WeatherUtils {
 	void draw_line_on_map(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double start_lat, double start_lon, double end_lat, double end_lon, wxColour color);
 	void draw_considered_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> zone_points);
 	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> create_considered_zone_from_route(Route* route);
-	std::list<wxPoint2DDouble> create_considered_grid_from_route(Route* route);
+	std::vector<std::vector<int>> create_considered_grid_from_route(Route* route, double lat_min, double lat_max, double lon_min, double lon_max);
+	void build_available_zone_for_section(double x0, double y0, double x1, double y1, double lat_min, double lon_min, std::vector<std::vector<int>> &grid);
+	//int get_lat_index(double lat, double lat_min);
+	//int get_lon_index(double lon, double lon_min);
+	int get_coordinate_index(double coord, double coord_min);
+	double get_coordinate_from_index(int index, double coord_min);
 };
 
 #endif

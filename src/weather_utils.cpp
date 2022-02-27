@@ -165,10 +165,38 @@ void WeatherUtils::draw_considered_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &V
 	}
 }
 
-std::list<wxPoint2DDouble> WeatherUtils::create_considered_grid_from_route(Route* route) {
-	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> resultList = std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>>();
+void print_to_file(RoutePoint *p, std::string filename) {
+	std::ofstream myfile;
+	myfile.open(filename, std::ofstream::app);
+	myfile << p->GetLatitude();
+	myfile << " - ";
+	myfile << p->GetLongitude();
+	myfile << "\n";
+	myfile.close();
+}
+
+std::vector<std::vector<int>> WeatherUtils::create_considered_grid_from_route(Route* route, double lat_min, double lat_max, double lon_min, double lon_max)
+{
+	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
+	RoutePoint *start = node_start->GetData();
+	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
+	RoutePoint *finish = node_finish->GetData();
+
+	double start_grid_lat = std::round(start->m_lat * 10) / 10;
+	double start_grid_lon = std::round(start->m_lon * 10) / 10;
+	double finish_grid_lat = std::round(finish->m_lat * 10) / 10;
+	double finish_grid_lon = std::round(finish->m_lon * 10) / 10;
+
+	std::vector<std::vector<int>> resultGrid = std::vector<std::vector<int>>();
+	int lat_size = (lat_max - lat_min) * 10 + 1;
+	int lon_size = (lon_max - lon_min) * 10 + 1;
+	for (int j = 0; j < lat_size; j++) {
+		std::vector<int> temp;
+		resultGrid.push_back(temp);
+		resultGrid[resultGrid.size() - 1].resize(lon_size, -1);
+	}
+
 	wxRoutePointListNode* prevNode = route->pRoutePointList->GetFirst();
-	double zone_width = ZONE_WIDTH * 0.1;
 
 	for (wxRoutePointListNode* node = prevNode->GetNext();
 		node;
@@ -176,12 +204,149 @@ std::list<wxPoint2DDouble> WeatherUtils::create_considered_grid_from_route(Route
 	{
 		RoutePoint* pPrevRoutePoint = prevNode->GetData();
 		RoutePoint *pRoutePoint = node->GetData();
+	/*	print_to_file(pRoutePoint, "C:\\Users\\gosha\\Documents\\GitHub\\openCPN_temp\\tmepFile.txt");
+		print_to_file(pPrevRoutePoint, "C:\\Users\\gosha\\Documents\\GitHub\\openCPN_temp\\tmepFile.txt");*/
 
-		auto zone_points = get_zone_points(pPrevRoutePoint, pRoutePoint, zone_width);
+		double lat1, lon1, lat2, lon2;
+		lat1 = pPrevRoutePoint->m_lat;
+		lon1 = pPrevRoutePoint->m_lon;
+		lat2 = pRoutePoint->m_lat;
+		lon2 = pRoutePoint->m_lon;
+		
 
-		resultList.push_back(zone_points);
+		double lat_start, lon_start;
+
+		lat_start = std::round(lat1 * 10) / 10;
+		lon_start = std::round(lon1 * 10) / 10;
+
+		double lat_finish, lon_finish;
+
+		lat_finish = std::round(lat2 * 10) / 10;
+		lon_finish = std::round(lon2 * 10) / 10;
+
+
+		build_available_zone_for_section(lat_start, lon_start, lat_finish, lon_finish, lat_min, lon_min, resultGrid);
 
 		prevNode = node;
 	}
+	return resultGrid;
 }
 
+void propagade_evenly_with_size(std::vector<std::vector<int>> &grid, int size, int x, int y)
+{
+	int dim_x = grid.size();
+	int dim_y = grid[0].size();
+	int i, j;
+	for (i = size; i >= 0; i--) {
+		for (j = 0; j <= size - i; j++) {
+			if (x + i < dim_x && y + j < dim_y && grid[x + i][y + j] != 0)
+				grid[x + i][y + j] = 1;
+			if (x + i < dim_x && y - j >= 0 && grid[x + i][y - j] != 0)
+				grid[x + i][y - j] = 1;
+			if (x - i >= 0 && y + j < dim_y && grid[x - i][y + j] != 0)
+				grid[x - i][y + j] = 1;
+			if (x - i >= 0 && y - j >= 0 && grid[x - i][y - j] != 0)
+				grid[x - i][y - j] = 1;
+		}
+	}
+}
+
+void WeatherUtils::build_available_zone_for_section(double lat_start, double lon_start, double lat_finish, double lon_finish, double lat_min, double lon_min, std::vector<std::vector<int>> &grid)
+{
+	int start_lat_idx = get_coordinate_index(lat_start, lat_min);
+	int start_lon_idx = get_coordinate_index(lon_start, lon_min);
+	int finish_lat_idx = get_coordinate_index(lat_finish, lat_min);
+	int finish_lon_idx = get_coordinate_index(lon_finish, lon_min);
+
+	double dx = fabs(lat_finish - lat_start);
+	double dy = fabs(lon_finish - lon_start);
+
+	/*int x = int(floor(lat_start));
+	int y = int(floor(lon_start));*/
+	int x = std::round(lat_start * 10);
+	int y = std::round(lon_start * 10);
+
+	double dt_dx = 1.0 / dx;
+	double dt_dy = 1.0 / dy;
+
+	double t = 0;
+
+	int n = 1;
+	int x_inc, y_inc;
+	double t_next_vertical, t_next_horizontal;
+
+	if (dx == 0)
+	{
+		x_inc = 0;
+		t_next_horizontal = dt_dx; // infinity
+	}
+	else if (lat_finish > lat_start)
+	{
+		x_inc = 1;
+		n += finish_lat_idx - start_lat_idx;
+		t_next_horizontal = (floor(lat_start) + 1 - lat_start) * dt_dx;
+	}
+	else
+	{
+		x_inc = -1;
+		n += start_lat_idx - finish_lat_idx;
+		t_next_horizontal = (lat_start - floor(lat_start)) * dt_dx;
+	}
+
+	if (dy == 0)
+	{
+		y_inc = 0;
+		t_next_vertical = dt_dy; // infinity
+	}
+	else if (lon_finish > lon_start)
+	{
+		y_inc = 1;
+		n += finish_lon_idx - start_lon_idx;
+		t_next_vertical = (floor(lon_start) + 1 - lon_start) * dt_dy;
+	}
+	else
+	{
+		y_inc = -1;
+		n += start_lon_idx - finish_lon_idx;
+		t_next_vertical = (lon_start - floor(lon_start)) * dt_dy;
+	}
+
+	for (; n > 0; --n)
+	{
+		grid[x][y] = 0;
+		propagade_evenly_with_size(grid, ZONE_WIDTH, x, y);
+		if (t_next_vertical < t_next_horizontal)
+		{
+			y += y_inc;
+			t = t_next_vertical;
+			t_next_vertical += dt_dy;
+		}
+		else
+		{
+			x += x_inc;
+			t = t_next_horizontal;
+			t_next_horizontal += dt_dx;
+		}
+	}
+}
+
+
+//int WeatherUtils::get_lat_index(double lat, double lat_min) {
+//	lat = std::round(lat * 10) / 10;
+//	return (lat - lat_min) * 10;
+//}
+//
+//int WeatherUtils::get_lon_index(double lon, double lon_min) {
+//	lon = std::round(lon * 10) / 10;
+//	return (lon - lon_min) * 10;
+//}
+
+int WeatherUtils::get_coordinate_index(double coord, double coord_min) {
+	coord = std::round(coord * 10) / 10;
+	return (coord - coord_min) * 10;
+}
+
+double WeatherUtils::get_coordinate_from_index(int index, double coord_min) {
+	double coord = (double)index / 10.0f + coord_min;
+	return coord;
+}
