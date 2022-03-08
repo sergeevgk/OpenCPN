@@ -393,6 +393,8 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	}
 }
 
+// TODO: try another way to check "part_of_route - earth" collision
+// see PlugIn_GSHHS_CrossesLand function
 void Weather::check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart) {
 	double select_radius = 1e-4;
 	ListOfObjRazRules * map_objects = get_objects_at_lat_lon(lat, lon, select_radius, chart, &VP, MASK_AREA);
@@ -428,6 +430,35 @@ void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, 
 		}
 	}
 	return;
+}
+
+bool Weather::is_depth_in_cone_enough(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end) {
+	// начальное значение радиуса для поиска объектов
+	double draft = cc->GetShipDraft();
+	float draft_in_ft = draft; // unit of measurement. - ft. // единицы измерения - футы
+	double r = 1e-4;
+	double angle = 0.017;
+	double tan = std::tan(angle);
+	wxPoint2DDouble step = WeatherUtils::step_for_way(start, end, r);
+	// цикл с некоторым шагом по пути движения
+	for (wxPoint2DDouble point = start - step; point.GetDistance(end) >= r; point += step) {
+		// получение объектов в радиусе
+		r += tan * step.GetDistance(wxPoint2DDouble(0, 0)); // тангенс угла
+		step = step * (1.0f + tan);
+		ListOfObjRazRules* select_objects = get_objects_at_lat_lon(point.m_x, point.m_y, r, chart, &VP, MASK_ALL - MASK_AREA);
+		ListOfObjRazRules* select_areas = get_objects_at_lat_lon(point.m_x, point.m_y, r, chart, &VP, MASK_AREA);
+		if (select_objects->Number() == 0 && select_areas->Number() == 0)
+			continue;
+
+		if (select_objects->Number() != 0 && !is_deep_enough(select_objects, chart, draft_in_ft)) {
+			return false;
+		}
+
+		if (select_areas->Number() != 0 && !is_deep_enough_area(select_areas, chart, draft_in_ft)) {
+			return false;
+		}
+	}
+	return true;
 }
 
 double Weather::calculate_speed_koef(ChartCanvas *cc, double h) {
@@ -821,6 +852,11 @@ std::pair<int, double> Weather::get_time_shift(double time) {
 
 
 void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone) {
+	ChartBase *chart = cc->GetChartAtCursor();
+	s57chart *s57ch = NULL;
+	if (chart) {
+		s57ch = dynamic_cast<s57chart*>(chart);
+	}
 
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
@@ -885,15 +921,15 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 		double now_weight = p.first;
 
 		if (now_weight > D[now_lat_ind][now_lon_ind]) { continue; }
-
+		
 		for (int i = -1; i <= 1; i++) {
 			for (int j = -1; j <= 1; j++) {
 				if (i == 0 && j == 0) continue;
-				int next_lat = now_lat_ind + i;
-				int next_lon = now_lon_ind + j;
-				if (!is_in_weather_grid(next_lat,next_lon)) continue;
-				if (D[next_lat][next_lon] <= D[now_lat_ind][now_lon_ind]) continue;
-				if (considered_zone[next_lat][next_lon] == -1) continue;
+				int next_lat_ind = now_lat_ind + i;
+				int next_lon_ind = now_lon_ind + j;
+				if (!is_in_weather_grid(next_lat_ind,next_lon_ind)) continue;
+				if (D[next_lat_ind][next_lon_ind] <= D[now_lat_ind][now_lon_ind]) continue;
+				if (considered_zone[next_lat_ind][next_lon_ind] == -1) continue;
 				double way = std::sqrt((double)(i * i + j * j));
 
 				/////
@@ -915,14 +951,24 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 				PointWeatherData now_square = grid_data[ind_now_time].second[now_lat_ind][now_lon_ind];
 				if (now_square.creation_time == "-1") continue;
 				double sum_waves = now_square.wave_height + now_square.ripple_height;
-				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 ){//|| !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100 ){
 					continue;
 				}
-				//TODO проверка на глубину
-
-				//
-
 				double v_first_half = v_nominal * calculate_speed_koef(cc, sum_waves);
+
+
+				//TODO проверка на глубину. Будет осуществляться по кратчайшему пути, без учета прохода по граням и тд.
+				// возможно придется поделить путь пополам и проверить по двум половинам пути с учетом разной скорости для раствора конусов
+				// получить координаты start и finish из индексов
+				double now_lat = WeatherUtils::get_coordinate_from_index(now_lat_ind, this->lat_min);
+				double now_lon = WeatherUtils::get_coordinate_from_index(now_lon_ind, this->lon_min);
+				double next_lat = WeatherUtils::get_coordinate_from_index(next_lat_ind, this->lat_min);
+				double next_lon = WeatherUtils::get_coordinate_from_index(next_lon_ind, this->lon_min);
+				
+				// вызвать is_depth_in_cone_enough() с проверкой результата на истину
+				if (!is_depth_in_cone_enough(s57ch, cc, dc, VP, box, wxPoint2DDouble(now_lat, now_lon), wxPoint2DDouble(next_lat, next_lon))) {
+					continue;
+				}
 
 				double time_half_way = (way / 2) / v_first_half;
 
@@ -942,12 +988,13 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 						break;
 					}
 				}
-				PointWeatherData half_square = grid_data[ind_half_time].second[next_lat][next_lon];
+				PointWeatherData half_square = grid_data[ind_half_time].second[next_lat_ind][next_lon_ind];
 				if (half_square.creation_time == "-1") continue;
 				double sum_waves_half = half_square.wave_height + half_square.ripple_height;
-				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100){// || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100){
 					continue;
 				}
+				
 				double v_second_half = v_nominal * calculate_speed_koef(cc, sum_waves_half);
 				double time_second_half_way = (way / 2) / v_second_half;
 
@@ -967,19 +1014,19 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 						break;
 					}
 				}
-				PointWeatherData whole_square = grid_data[ind_whole_time].second[next_lat][next_lon];
+				PointWeatherData whole_square = grid_data[ind_whole_time].second[next_lat_ind][next_lon_ind];
 				if (whole_square.creation_time == "-1") continue;
 				double sum_waves_whole = whole_square.wave_height + whole_square.ripple_height;
-				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100){// || !is_deep_enough(0, 0)) { //тут другие координаты, но все равно
+				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100){
 					continue;
 				}
 				
 				///  все проверки пройдены, осталось обновить очередь и внести новые данные в массив
 
 				double time_to_next = now_weight + time_half_way + time_second_half_way;
-				if (time_to_next < D[next_lat][next_lon]) {
-					D[next_lat][next_lon] = time_to_next;
-					q.push({ time_to_next, {next_lat, next_lon} });
+				if (time_to_next < D[next_lat_ind][next_lon_ind]) {
+					D[next_lat_ind][next_lon_ind] = time_to_next;
+					q.push({ time_to_next, {next_lat_ind, next_lon_ind} });
 				}
 			}
 		}
@@ -998,13 +1045,13 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 			for (int i = -1; i <= 1; i++) {
 				for (int j = -1; j <= 1; j++) {
 					if (i == 0 && j == 0) continue;
-					int next_lat = lat_ind_path + i;
-					int next_lon = lon_ind_path + j;
-					if (!is_in_weather_grid(next_lat, next_lon)) continue;
-					if (D[next_lat][next_lon] <= min) {
-						min = D[next_lat][next_lon];
-						lat_min_ind = next_lat;
-						lon_min_ind = next_lon;
+					int next_lat_ind = lat_ind_path + i;
+					int next_lon_ind = lon_ind_path + j;
+					if (!is_in_weather_grid(next_lat_ind, next_lon_ind)) continue;
+					if (D[next_lat_ind][next_lon_ind] <= min) {
+						min = D[next_lat_ind][next_lon_ind];
+						lat_min_ind = next_lat_ind;
+						lon_min_ind = next_lon_ind;
 					}
 				}
 			}

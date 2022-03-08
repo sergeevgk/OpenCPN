@@ -106,7 +106,8 @@ private:
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
 	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
 	bool is_deep_enough_area(ListOfObjRazRules *list, s57chart* chart, float draft);
-	void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
+	void check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
+	bool is_depth_in_cone_enough(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
 	bool is_land_area(ListOfObjRazRules *list, s57chart * chart);
 	bool is_same_colour(wxColour first, wxColour second);
 	ListOfObjRazRules * get_objects_at_lat_lon(double lat, double lon, double select_rad, s57chart* chart, ViewPort *VP, int mask = MASK_ALL);
