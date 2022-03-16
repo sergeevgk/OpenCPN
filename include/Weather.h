@@ -9,7 +9,6 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include "vector2D.h"
 #include "ocpndc.h"
 #include "Route.h"
-
 #include <vector>
 #include <cmath>
 #include <list>
@@ -22,12 +21,15 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 
 #include <curl/curl.h>
 #include "cm93.h"
+#include "db_utils.h"
 
 class HyperlinkList;
 class ChartCanvas;
 class ViewPort;
 class ocpnDCl;
 class LLBBox;
+
+//class DbUtils::DbContext;
 
 class Weather
 {
@@ -82,9 +84,11 @@ public:
 private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	void draw_refuge_places(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour colour = wxColour(135,0,135,255));
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	void draw_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();
@@ -121,8 +125,8 @@ private:
 	 bool is_downloaded = false;
 	 std::vector<std::pair<std::string, std::vector<PointWeatherData>>> date_data;
 	 std::vector <std::pair<std::string, std::vector<std::vector<PointWeatherData>>>> grid_data;//25 блоков, каждый блок - пара из времени и двумерного массива поинтов
-
-
+	 DbUtils::DbContext* db_context;
+	 std::vector<WeatherUtils::RefugePlace> refuge_place_vector;
 	 bool draw_downloaded = false;
 
 	 double lat_min;

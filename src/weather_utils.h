@@ -17,7 +17,7 @@
 #include <regex>
 #include <utility>
 #include <curl/curl.h>
-#include "cm93.h"
+#include <cm93.h>
 
 class ChartCanvas;
 class ViewPort;

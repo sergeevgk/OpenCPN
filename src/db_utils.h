@@ -1,9 +1,9 @@
-#pragma once
 #ifndef __DBUTILS__
 #define __DBUTILS__
 
-#include <sqlite3.h>
 #include <string>
+#include <vector>
+#include "refuge_place.h"
 
 namespace DbUtils 
 {
@@ -21,9 +21,9 @@ class DbContext {
 		virtual ~DbContext();
 
 		int SeedDefaultData();
-		//int QuerySafePlaceData();
+		std::vector<WeatherUtils::RefugePlace> QuerySafePlaceData();
 	private:
-
+		//int callback(void *data, int argc, char **argv, char **azColName);
 	};
 }
 

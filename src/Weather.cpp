@@ -2,6 +2,7 @@
 
 #include "Weather.h"
 #include "weather_utils.h"
+#include "db_utils.h"
 #include "routeman.h"
 #include "navutil.h"
 #include "chcanv.h"
@@ -11,13 +12,17 @@
 extern ocpnGLOptions g_GLOptions;
 #endif
 
-extern Routeman *g_pRouteMan;
+extern Routeman		*g_pRouteMan;
 extern float        g_ChartScaleFactorExp;
-extern RouteList        *pRouteList;
-extern TrackList        *pTrackList;
+extern RouteList    *pRouteList;
+extern TrackList    *pTrackList;
+extern wxString		g_default_wp_icon;
 
 Weather::Weather()
 {
+	db_context = new DbUtils::DbContext();
+	db_context->SeedDefaultData();
+	refuge_place_vector = db_context->QuerySafePlaceData();
 	//Weather::download_weather_from_esimo();
 
 
@@ -61,7 +66,8 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	draw_gradient(cc, dc, VP, box);
+	//draw_gradient(cc, dc, VP, box);
+	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
 	}
@@ -782,9 +788,27 @@ void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, Cha
 	 }
 }
 
+void Weather::draw_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition) {
+	Route *pRoute = new Route();
+	pRoute->AddPoint(&currentPosition);
+	
+	for (auto refuge : refuge_place_vector) {
+		RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name);
+		pRoute->AddPoint(&p);
+
+		auto considered_zone_grid = WeatherUtils::create_considered_grid_from_route(pRoute, lat_min, lat_max, lon_min, lon_max);
+
+		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
+		find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid);
+
+		Sleep(1000);
+		pRoute->RemovePoint(&p);
+	}
+
+	
+}
+
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
-
-
 	if (cc->GetShipSpeed() <= 0) { return; }
 	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
 	if ((cc->GetStartTime() == "no data") || cc->GetStartTime() == "") return;
@@ -1194,6 +1218,57 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 			//	dc.DrawText(msg, 10, 10);
 			//}
 		}
+	}
+}
+
+void Weather::draw_refuge_places(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+
+	std::vector<std::vector<PointWeatherData>> now_data;
+
+	for (WeatherUtils::RefugePlace refuge : refuge_place_vector){
+			wxPoint r;
+			wxRect hilitebox;
+			double lat, lon;
+			
+			lat = refuge.latitude;
+			lon = refuge.longitude;
+
+			cc->GetCanvasPointPix(lat, lon, &r);
+
+			wxPen *pen;
+			pen = g_pRouteMan->GetRoutePointPen();
+
+			int sx2 = 2;
+			int sy2 = 2;
+
+			wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
+
+			hilitebox = r1;
+			hilitebox.x -= r.x;
+			hilitebox.y -= r.y;
+
+			hilitebox.width *= g_ChartScaleFactorExp;
+			hilitebox.height *= g_ChartScaleFactorExp;
+
+			hilitebox.width *= VP.view_scale_ppm;
+			hilitebox.height *= VP.view_scale_ppm;
+
+			float radius;
+			hilitebox.Inflate(15);
+			radius = 15.0f;
+
+			unsigned char transparency = 150;
+
+			unsigned char red, green, blue;
+			red = 50;
+			green = 150;
+			blue = 0;
+			wxColour hi_colour(red, green, blue, 255);
+			//wxColour hi_colour = pen->GetColour();
+
+			//  Highlite any selected point
+			AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
+				hi_colour, transparency);
 	}
 }
 
