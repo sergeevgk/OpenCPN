@@ -484,6 +484,8 @@ public:
 	  void SetCheckRouteEnabled(bool is_enabled) { m_is_check_route_enabled = is_enabled; }
 	  bool GetCalculateRouteEnabled() { return m_is_calculate_route_enabled; }
 	  void SetCalculateRouteEnabled(bool is_enabled) { m_is_calculate_route_enabled = is_enabled; }
+	  bool GetCheckOptimalRoute() { return m_is_check_optimal_route_enabled; }
+	  void SetCheckOptimalRouteEnabled(bool is_enabled) { m_is_check_optimal_route_enabled = is_enabled; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -906,6 +908,7 @@ private:
 	  std::vector<std::string> m_data_time_choices;
 	  bool		  m_is_check_route_enabled;
 	  bool		  m_is_calculate_route_enabled;
+	  bool		  m_is_check_optimal_route_enabled;
 	  int		  m_start_time_three_hours;
 	  int		  m_ship_danger_height;//sm
 	  int		  m_ship_n;

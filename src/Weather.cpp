@@ -17,6 +17,7 @@ extern float        g_ChartScaleFactorExp;
 extern RouteList    *pRouteList;
 extern TrackList    *pTrackList;
 extern wxString		g_default_wp_icon;
+extern WayPointman      *pWayPointMan;
 
 Weather::Weather()
 {
@@ -66,7 +67,7 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	//draw_gradient(cc, dc, VP, box);
+	draw_gradient(cc, dc, VP, box);
 	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
@@ -74,6 +75,9 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 	if (cc->GetCalculateRouteEnabled()) {
 		draw_calculate_route(cc, dc, VP, box);
 	}
+	/*if (cc->GetCheckOptimalRoute()) {
+		draw_check_conflicts_on_route(cc, dc, VP, box, this->last_optimal_path);
+	}*/
 }
 
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
@@ -244,7 +248,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 							std::string temp = "huge wave:" + std::to_string(sum_waves) + " in " + std::to_string(prev_lat) + " " + std::to_string(prev_lon);
 							errors += temp + "\n";
 
-							print_error_zone(cc, dc, VP, box, prev_lat, prev_lon);
+							print_zone(cc, dc, VP, box, prev_lat, prev_lon);
 						}
 					}
 				}
@@ -405,7 +409,7 @@ void Weather::check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 	double select_radius = 1e-4;
 	ListOfObjRazRules * map_objects = get_objects_at_lat_lon(lat, lon, select_radius, chart, &VP, MASK_AREA);
 	if (is_land_area(map_objects, chart)) {
-		print_error_zone(cc, dc, VP, box, lat, lon, wxColour(255, 0, 0, 255));
+		print_zone(cc, dc, VP, box, lat, lon, wxColour(255, 0, 0, 255));
 	}
 }
 
@@ -428,11 +432,11 @@ void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, 
 			continue;
 
 		if (select_objects->Number() != 0 && !is_deep_enough(select_objects, chart, draft_in_ft)) {
-			print_error_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
 		}
 
 		if (select_areas->Number() != 0 && !is_deep_enough_area(select_areas, chart, draft_in_ft)) {
-			print_error_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
 		}
 	}
 	return;
@@ -687,7 +691,7 @@ bool Weather::is_same_colour(wxColour first, wxColour second) {
 		(first.Green() == second.Green());
 }
 
-void Weather::print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour fill_colour) {
+void Weather::print_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour fill_colour) {
 	wxPoint r;
 	wxRect hilitebox;
 	wxColour default_colour = wxColour(0,0,0,0);
@@ -779,16 +783,16 @@ void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, Cha
 			 double lat = WeatherUtils::get_coordinate_from_index(i, lat_min);
 			 double lon = WeatherUtils::get_coordinate_from_index(j, lon_min);
 			 if (grid[i][j] == 0) {
-				 Weather::print_error_zone(cc, dc, VP, box, lat, lon, route_color);
+				 Weather::print_zone(cc, dc, VP, box, lat, lon, route_color);
 			 }
 			 if (grid[i][j] == 1) {
-				 Weather::print_error_zone(cc, dc, VP, box, lat, lon, zone_color);
+				 Weather::print_zone(cc, dc, VP, box, lat, lon, zone_color);
 			 }
 		 }
 	 }
 }
 
-void Weather::draw_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition) {
+void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition) {
 	Route *pRoute = new Route();
 	pRoute->AddPoint(&currentPosition);
 	
@@ -873,7 +877,6 @@ std::pair<int, double> Weather::get_time_shift(double time) {
 	double shifted = time - (60 * 60 * 3) * plus_index;
 	return { plus_index, shifted };
 }
-
 
 void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone) {
 	ChartBase *chart = cc->GetChartAtCursor();
@@ -1084,6 +1087,9 @@ void Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const L
 			lon_ind_path = lon_min_ind;
 		}
 
+		// save last route for conflict situation check
+		this->last_optimal_path = path;
+
 		for (int i = 0; i < path.size(); i++) {
 			//print_path_step(cc, dc,VP, box, path[i].first, path[i].second);
 			print_path_step(cc, dc, VP, box, lat_min + ((double)path[i].first)/10, lon_min + ((double)path[i].second)/10);
@@ -1270,6 +1276,46 @@ void Weather::draw_refuge_places(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, cons
 			AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
 				hi_colour, transparency);
 	}
+}
+
+//
+// summary: this method draws conflict which was found on provided 'optimal route'.
+// It is called on Draw action when checkbox activated
+// params:
+// route - optimal route which consists of pair<lat_index, lon_index> of weather grid.
+//
+void Weather::draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<int, int>> route) {
+	// call foreach cell in route check_conflicts_in_weather_grid_cell
+	ChartBase *chart = cc->GetChartAtCursor();
+	s57chart *s57ch = NULL;
+	if (chart) {
+		s57ch = dynamic_cast<s57chart*>(chart);
+	}
+	for (auto cell : route) {
+		if (check_conflicts_in_weather_grid_cell(s57ch, cc, dc, VP, box, cell.first, cell.second)) {
+			double lat = WeatherUtils::get_coordinate_from_index(cell.first, lat_min);
+			double lon = WeatherUtils::get_coordinate_from_index(cell.second, lon_min);
+			// draw conflict area
+			print_zone(cc, dc, VP, box, lat, lon);
+			//draw_find routes to refuge places (at least one)
+			auto pos = RoutePoint(lat, lon, g_default_wp_icon, "conflict_position");
+			draw_find_refuge_roots(cc, dc, VP, box, pos);
+		}
+	}
+}
+
+bool Weather::check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind) {
+	double lat = WeatherUtils::get_coordinate_from_index(lat_ind, lat_min);
+	double lon = WeatherUtils::get_coordinate_from_index(lon_ind, lon_min);
+	double radius = 5556; // 3 sea miles im meters
+	// get objects in radius = 1/2 cell width
+	auto wayPoint = pWayPointMan->GetNearbyWaypoint(lat, lon, radius);
+	// find object with icon "Hazard-Danger" and text starting with "weather_conflict"
+	// return true if found
+	if (wayPoint->GetIconName().Contains("Hazard-Danger") || wayPoint->GetName().StartsWith("weather_confilct")) {
+		return true;
+	}
+	return false;
 }
 
 //void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {

@@ -85,11 +85,12 @@ private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_refuge_places(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
-	void print_error_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour colour = wxColour(135,0,135,255));
+	void print_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour colour = wxColour(135,0,135,255));
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
-	void draw_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition);
+	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	void draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<int, int>> route);
 	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();
 	double find_min_wave_height();
@@ -106,6 +107,7 @@ private:
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
 	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone);
+	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
 	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
@@ -127,6 +129,7 @@ private:
 	 std::vector <std::pair<std::string, std::vector<std::vector<PointWeatherData>>>> grid_data;//25 блоков, каждый блок - пара из времени и двумерного массива поинтов
 	 DbUtils::DbContext* db_context;
 	 std::vector<WeatherUtils::RefugePlace> refuge_place_vector;
+	 std::vector<std::pair<int, int>> last_optimal_path; // optimal route which consists of pairs <lat_index, lon_index> of weather grid.
 	 bool draw_downloaded = false;
 
 	 double lat_min;

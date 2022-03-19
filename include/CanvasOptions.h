@@ -63,6 +63,7 @@ enum {
 	ID_DANGERHEIGHT,
 	IDCO_CHECKROUTE,
 	IDCO_CALCULATEROUTE,
+	IDCO_CHECKOPTIMALROUTE,
 	ID_THREEHOURSTIME,
 	ID_SHIPDANGERHEIGHT,
 	ID_SHIPN,
@@ -116,7 +117,7 @@ private:
 
 	wxSlider *pSliderDangerHeight;
 	wxChoice *pChoiceDateTime, *pChoiceStartTime;
-	wxCheckBox *pCBCheckRoute, *pCBCalculateRoute;
+	wxCheckBox *pCBCheckRoute, *pCBCalculateRoute, *pCBCheckOptimalRoute;
 	wxTimePickerCtrl *pThreeHoursTime;
 	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta, *pShipSpeed, *pShipDraft;
     

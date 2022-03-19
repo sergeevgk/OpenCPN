@@ -45,8 +45,6 @@ namespace WeatherUtils {
 	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> create_considered_zone_from_route(Route* route);
 	std::vector<std::vector<int>> create_considered_grid_from_route(Route* route, double lat_min, double lat_max, double lon_min, double lon_max);
 	void build_available_zone_for_section(double x0, double y0, double x1, double y1, double lat_min, double lon_min, std::vector<std::vector<int>> &grid);
-	//int get_lat_index(double lat, double lat_min);
-	//int get_lon_index(double lon, double lon_min);
 	int get_coordinate_index(double coord, double coord_min);
 	double get_coordinate_from_index(int index, double coord_min);
 };
