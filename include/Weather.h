@@ -106,7 +106,7 @@ private:
 	static bool download_weather_from_esimo();
 	void create_data_grid();
 	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
-	void find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone);
+	std::vector<std::pair<int, int>> find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone);
 	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
