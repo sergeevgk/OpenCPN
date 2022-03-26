@@ -47,6 +47,7 @@ namespace WeatherUtils {
 	void build_available_zone_for_section(double x0, double y0, double x1, double y1, double lat_min, double lon_min, std::vector<std::vector<int>> &grid);
 	int get_coordinate_index(double coord, double coord_min);
 	double get_coordinate_from_index(int index, double coord_min);
+	double get_distance(wxPoint2DDouble a, wxPoint2DDouble b);
 };
 
 #endif

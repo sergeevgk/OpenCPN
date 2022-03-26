@@ -122,6 +122,7 @@ private:
 	bool is_in_weather_grid(int lat_ind, int lon_ind);
 	void highlight_considered_grid(std::vector<std::vector<int>> &grid, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	std::pair<int, double> get_time_shift(double time);
+	int get_next_nearest_refuge_place_index(std::vector<WeatherUtils::RefugePlace> refuge_place_vector, RoutePoint position, int current_nearest_index);
 
 private:
 	 bool is_downloaded = false;

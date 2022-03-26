@@ -350,3 +350,8 @@ double WeatherUtils::get_coordinate_from_index(int index, double coord_min) {
 	double coord = (double)index / 10.0f + coord_min;
 	return coord;
 }
+
+double WeatherUtils::get_distance(wxPoint2DDouble a, wxPoint2DDouble b)
+{
+	return sqrt( pow(a.m_x - b.m_x, 2) + pow(a.m_y - b.m_y, 2));
+}

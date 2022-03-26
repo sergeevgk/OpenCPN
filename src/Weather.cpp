@@ -68,7 +68,7 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	//draw_gradient(cc, dc, VP, box);
+	draw_gradient(cc, dc, VP, box);
 	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
@@ -793,12 +793,32 @@ void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, Cha
 	 }
 }
 
-void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time) {
+int Weather::get_next_nearest_refuge_place_index(std::vector<WeatherUtils::RefugePlace> refuge_place_vector, RoutePoint position, int current_nearest_index = -1)
+{
+	int min_distance_index = -1;
+	double min_distance = INFINITY - 1;
+	wxPoint2DDouble pos = wxPoint2DDouble(position.m_lat, position.m_lon);
+	for (int i = 0; i < refuge_place_vector.size(); i++) {
+		if (i == current_nearest_index)
+			continue;
+		wxPoint2DDouble place = wxPoint2DDouble(refuge_place_vector[i].latitude, refuge_place_vector[i].longitude);
+		double distance = WeatherUtils::get_distance(pos, place);
+		if (distance < min_distance) {
+			min_distance_index = i;
+			min_distance = distance;
+		}
+	}
+	return min_distance_index;
+}
+
+void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint current_position, double rescue_start_time) {
 	Route *pRoute = new Route();
-	pRoute->AddPoint(&currentPosition);
+	pRoute->AddPoint(&current_position);
 	
-	//for (auto refuge : refuge_place_vector) {
-	auto refuge = refuge_place_vector[2];
+	// find next nearest refuge place
+	int nearest_index = get_next_nearest_refuge_place_index(refuge_place_vector, current_position);
+	auto refuge = refuge_place_vector[nearest_index];
+
 	RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name);
 	pRoute->AddPoint(&p);
 
@@ -808,9 +828,13 @@ void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, 
 	// don't save to last_optimal_path
 	auto r = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid, rescue_start_time);
 
-	//Sleep(1000);
+	// if route was not found - increase width of considered zone x2 (once)
+	
+	// if not found - try get another (next by distance) refuge place 
+
+	// if still not found - build simple route with marked conflicts
+
 	pRoute->RemovePoint(&p);
-	//}
 
 	
 }
