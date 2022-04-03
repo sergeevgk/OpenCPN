@@ -111,7 +111,9 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
 
-		analyseRouteCheck(cc, dc, VP, box, pRouteDraw);
+		bool buildEscapeRoute_OnConflict = true;
+		double start_time_shift = 0;
+		analyseRouteCheck(cc, dc, VP, box, pRouteDraw, start_time_shift, buildEscapeRoute_OnConflict);
 	}
 
 	//if (is_downloaded) {
@@ -126,7 +128,7 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 	//}
 }
 
-void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift) {
+void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift, bool build_rescue_root, bool draw_cone_lines) {
 
 	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
 	RoutePoint *prp2 = node->GetData();
@@ -260,6 +262,12 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 							errors += temp + "\n";
 
 							print_zone(cc, dc, VP, box, prev_lat, prev_lon);
+							// build rescue root from first conflict point
+							if (build_rescue_root) {
+								RoutePoint rp = RoutePoint(prev_lat, prev_lon, g_default_wp_icon, "conflict point");
+								draw_find_refuge_roots(cc, dc, VP, box, rp, sum_time);
+								return;
+							}
 						}
 					}
 				}
@@ -333,8 +341,10 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 			wxPoint2DDouble end_rot1 = WeatherUtils::rotate_vector_around_first_point(start, end, angle);
 			wxPoint2DDouble end_rot2 = WeatherUtils::rotate_vector_around_first_point(start, end, -angle);
 			// рисуем конус до следующей точки, угол в зависимости от скорости (симметрично относительно пути)
-			WeatherUtils::draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot1.m_x, end_rot1.m_y, wxColour(255, 0, 0, 255));
-			WeatherUtils::draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot2.m_x, end_rot2.m_y, wxColour(255, 0, 0, 255));
+			if (draw_cone_lines) {
+				WeatherUtils::draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot1.m_x, end_rot1.m_y, wxColour(255, 0, 0, 255));
+				WeatherUtils::draw_line_on_map(cc, dc, VP, box, prev_lat, prev_lon, end_rot2.m_x, end_rot2.m_y, wxColour(255, 0, 0, 255));
+			}
 			// проверяем внутри него объекты на глубину
 			
 			check_depth_in_cone(s57ch, cc, dc, VP, box, start, end);
@@ -940,7 +950,7 @@ void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas * cc, ocpnDC & 
 	WeatherUtils::draw_line_on_map(cc, dc, VP, box, start->m_lat, start->m_lon, finish->m_lat, finish->m_lon, wxColour(0, 255, 0, 255));
 
 	// call analyseCheckRoute();
-	analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time);
+	analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time, false, false);
 }
 
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
