@@ -68,7 +68,7 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	draw_gradient(cc, dc, VP, box);
+	//draw_gradient(cc, dc, VP, box);
 	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
@@ -111,7 +111,7 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
 
-		analyseRouteCheck(cc, dc, VP, box,pRouteDraw);
+		analyseRouteCheck(cc, dc, VP, box, pRouteDraw);
 	}
 
 	//if (is_downloaded) {
@@ -126,7 +126,7 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 	//}
 }
 
-void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route) {
+void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift) {
 
 	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
 	RoutePoint *prp2 = node->GetData();
@@ -145,12 +145,22 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	
 	double start_time_three_hours = cc->GetStartTimeThreeHours();
 	double now_time_three_hours = start_time_three_hours / 60 / 60;//в часах
-	std::string now_time = start_time;
-
+	int ind_start_time = -1;
+	for (int i = 0; i < grid_data.size(); i++) {
+		if (grid_data[i].first == start_time) {
+			ind_start_time = i;
+			break;
+		}
+	}
 	std::vector<std::string> all_choices = GetChoicesDateTime();
 	std::sort(all_choices.begin(), all_choices.end());
 	std::string errors = "\n\n\n";
-
+	
+	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, start_time_shift);
+	if (ind_start_time == -1) {
+		return;
+	}
+	std::string now_time = all_choices[ind_start_time];
 
 	//std::string str = std::to_string(VP.view_scale_ppm);
 	//wxString msg(str);
@@ -784,7 +794,7 @@ void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, Cha
 			 double lat = WeatherUtils::get_coordinate_from_index(i, lat_min);
 			 double lon = WeatherUtils::get_coordinate_from_index(j, lon_min);
 			 if (grid[i][j] == 0) {
-				 Weather::print_zone(cc, dc, VP, box, lat, lon, route_color);
+				 Weather::print_zone(cc, dc, VP, box, lat, lon, zone_color);
 			 }
 			 if (grid[i][j] == 1) {
 				 Weather::print_zone(cc, dc, VP, box, lat, lon, zone_color);
@@ -822,21 +832,115 @@ void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, 
 	RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name);
 	pRoute->AddPoint(&p);
 
-	auto considered_zone_grid = WeatherUtils::create_considered_grid_from_route(pRoute, lat_min, lat_max, lon_min, lon_max);
+	auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
+	auto considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRoute);
 
 	highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 	// don't save to last_optimal_path
 	auto r = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid, rescue_start_time);
 
 	// if route was not found - increase width of considered zone x2 (once)
-	
-	// if not found - try get another (next by distance) refuge place 
+	if (r.size() == 0) {
+		considered_zone_builder.increase_zone_width(2);
+		considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRoute);
+		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
+		// don't save to last_optimal_path
+		r = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid, rescue_start_time);
 
-	// if still not found - build simple route with marked conflicts
+		// if not found - try get another (next by distance) refuge place
+		// TODO - later
+
+		// if still not found - build simple route with marked conflicts
+		draw_simple_refuge_root_with_conflicts(cc, dc, VP, box, pRoute, rescue_start_time);
+	}
 
 	pRoute->RemovePoint(&p);
+}
 
-	
+// this method is draft and currently not used
+void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas* cc, ocpnDC& dc, ViewPort& VP, const LLBBox& box, Route* route, vector<vector<int>> consideredZoneGrid, double rescue_start_time)
+{
+	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
+	RoutePoint *start = node_start->GetData();
+	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
+	RoutePoint *finish = node_finish->GetData();
+
+	double lat_start = std::round(start->m_lat * 10) / 10;
+	double lon_start = std::round(start->m_lon * 10) / 10;
+	double lat_finish = std::round(finish->m_lat * 10) / 10;
+	double lon_finish = std::round(finish->m_lon * 10) / 10;
+	int start_lat_idx = WeatherUtils::get_coordinate_index(lat_start, lat_min);
+	int start_lon_idx = WeatherUtils::get_coordinate_index(lon_start, lon_min);
+	int finish_lat_idx = WeatherUtils::get_coordinate_index(lat_finish, lat_min);
+	int finish_lon_idx = WeatherUtils::get_coordinate_index(lon_finish, lon_min);
+
+	double v_nominal = cc->GetShipSpeed();
+
+	std::string start_time = cc->GetStartTime();
+	int ind_start_time = -1;
+	for (int i = 0; i < grid_data.size(); i++) {
+		if (grid_data[i].first == start_time) {
+			ind_start_time = i;
+			break;
+		}
+	}
+	double start_time_three_hours = cc->GetStartTimeThreeHours();
+	std::vector<std::string> all_choices = GetChoicesDateTime();
+	std::sort(all_choices.begin(), all_choices.end());
+
+	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, rescue_start_time);
+	if (ind_start_time == -1) {
+		return;
+	}
+	int ind_now_time = ind_start_time;
+	double elapsed_time = 0;
+	double time_to_next = 0;
+	// trace the grid by "0" cells 
+	for (int i = start_lat_idx, j = start_lon_idx; ; i < finish_lat_idx && j < finish_lon_idx) {
+		double lat = WeatherUtils::get_coordinate_from_index(i, lat_min);
+		double lon = WeatherUtils::get_coordinate_from_index(j, lon_min);
+		PointWeatherData now_square = grid_data[ind_now_time].second[i][j];
+		/*if (now_square.creation_time == "-1") 
+			continue;*/
+
+		double sum_waves = now_square.wave_height + now_square.ripple_height;
+		//checking weather conflicts 
+		if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100) {
+			// draw square of purple (conflict) color
+			print_zone(cc, dc, VP, box, lat, lon);
+		}
+		//checking static conflicts on sections
+		else if (false) {
+			// draw square of purple (conflict) color
+			print_zone(cc, dc, VP, box, lat, lon);
+		}
+		else {
+			// draw square of orange (safe route) color
+			print_path_step(cc, dc, VP, box, lat, lon);
+		}
+		double v_first_half = v_nominal * calculate_speed_koef(cc, sum_waves);
+		ind_now_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, elapsed_time);
+		if (ind_now_time == -1) {
+			return;
+		}
+		double way = 1;
+		double time_half_way = (way / 2) / v_first_half;
+
+		// elapsed_time += time_to_next
+	}
+}
+
+void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas * cc, ocpnDC & dc, ViewPort & VP, const LLBBox & box, Route * route, double rescue_start_time)
+{
+	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
+	RoutePoint *start = node_start->GetData();
+	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
+	RoutePoint *finish = node_finish->GetData();
+	// draw line btwn route endpoints
+	WeatherUtils::draw_line_on_map(cc, dc, VP, box, start->m_lat, start->m_lon, finish->m_lat, finish->m_lon, wxColour(0, 255, 0, 255));
+
+	// call analyseCheckRoute();
+	analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time);
 }
 
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
@@ -868,12 +972,12 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
 		
-		auto considered_zone_grid = WeatherUtils::create_considered_grid_from_route(pRouteDraw, lat_min, lat_max, lon_min, lon_max);
+		auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
+		auto considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRouteDraw);
 
 		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 		// save to last_optimal_path in order to use it in checking optimal route
-		double actual_start_time = cc->GetStartTimeThreeHours();
-		last_optimal_path = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_grid, actual_start_time);
+		last_optimal_path = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_grid);
 	}
 
 	if (is_downloaded) {
@@ -901,16 +1005,10 @@ bool Weather::is_in_weather_grid(int lat_ind, int lon_ind) {
 	return true;
 }
 
-std::pair<int, double> Weather::get_time_shift(double time) {
-	int plus_index = time / (60 * 60 * 3);
-	double shifted = time - (60 * 60 * 3) * plus_index;
-	return { plus_index, shifted };
-}
-
 //
 // Returns an optimal path of grid cells indices if such exists for particular route.
 //
-vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double actual_start_time) {
+vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double start_time_shift) {
 	ChartBase *chart = cc->GetChartAtCursor();
 	s57chart *s57ch = NULL;
 	if (chart) {
@@ -928,10 +1026,6 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 
 	double v_nominal = cc->GetShipSpeed();
 
-	double start_time_three_hours = actual_start_time;
-	std::vector<std::string> all_choices = GetChoicesDateTime();
-	std::sort(all_choices.begin(), all_choices.end());
-
 	std::string start_time = cc->GetStartTime();
 	int ind_start_time = -1;
 	for (int i = 0; i < grid_data.size(); i++) {
@@ -940,7 +1034,14 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 			break;
 		}
 	}
+	double start_time_three_hours = cc->GetStartTimeThreeHours();
+	std::vector<std::string> all_choices = GetChoicesDateTime();
+	std::sort(all_choices.begin(), all_choices.end());
 
+	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, start_time_shift);
+	if (ind_start_time == -1) {
+		return empty_vector;
+	}
 
 	double start_grid_lat = std::round(start->m_lat * 10) / 10;
 	double start_grid_lon = std::round(start->m_lon * 10) / 10;
@@ -993,7 +1094,7 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 
 				/////
 				//first half
-				std::pair<int, double> times_for_now = get_time_shift(now_weight + start_time_three_hours);
+				std::pair<int, double> times_for_now = WeatherUtils::get_time_shift(now_weight + start_time_three_hours);
 				if (times_for_now.first + ind_start_time >= all_choices.size()) {
 					continue;
 				}
@@ -1033,7 +1134,7 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 
 				/////
 				//second half
-				std::pair<int, double> times_for_half_way = get_time_shift(now_weight + start_time_three_hours + time_half_way);
+				std::pair<int, double> times_for_half_way = WeatherUtils::get_time_shift(now_weight + start_time_three_hours + time_half_way);
 				if (times_for_half_way.first + ind_start_time >= all_choices.size()) {
 					continue;
 				}
@@ -1059,7 +1160,7 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 
 				/////
 				//finish check
-				std::pair<int, double> times_for_whole_way = get_time_shift(now_weight + start_time_three_hours + time_half_way + time_second_half_way);
+				std::pair<int, double> times_for_whole_way = WeatherUtils::get_time_shift(now_weight + start_time_three_hours + time_half_way + time_second_half_way);
 				if (times_for_whole_way.first + ind_start_time >= all_choices.size()) {
 					continue;
 				}
@@ -1090,9 +1191,6 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 			}
 		}
 	}
-	// change path to vector<pair<int, pair<int,int>>> - add time to each step
-	// use these times to calculate conflict time slot
-	// pass time slot to method find_fast_route, cc->GetStartTimeThreeHours() as default
 	if (D[finish_lat_ind][finish_lon_ind] < INF - 1) {
 		vector<pair<double, pair<int, int>>> path;
 		pair<double, pair<int, int>> time_coordinates_pair = {

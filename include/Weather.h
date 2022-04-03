@@ -89,6 +89,8 @@ private:
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time);
+	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, std::vector<std::vector<int>> consideredZoneGrid, double rescue_start_time);
+	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, double rescue_start_time);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<double, std::pair<int, int>>> optimal_route);
 	void get_all_weather_date_data(const std::string& path);
@@ -105,8 +107,8 @@ private:
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
 	void create_data_grid();
-	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route);
-	std::vector<std::pair<double, std::pair<int, int>>> find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double actual_start_time);
+	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift = 0);
+	std::vector<std::pair<double, std::pair<int, int>>> find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double actual_start_time = 0);
 	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
@@ -121,7 +123,6 @@ private:
 	bool is_in_weather_area(double lat1, double lon1);
 	bool is_in_weather_grid(int lat_ind, int lon_ind);
 	void highlight_considered_grid(std::vector<std::vector<int>> &grid, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
-	std::pair<int, double> get_time_shift(double time);
 	int get_next_nearest_refuge_place_index(std::vector<WeatherUtils::RefugePlace> refuge_place_vector, RoutePoint position, int current_nearest_index);
 
 private:
