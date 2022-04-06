@@ -25,6 +25,7 @@ Weather::Weather()
 	db_context = new DbUtils::DbContext();
 	db_context->SeedDefaultData();
 	refuge_place_vector = db_context->QuerySafePlaceData();
+	ship_class_vector = db_context->QueryShipClasses();
 	//Weather::download_weather_from_esimo();
 
 
@@ -68,8 +69,10 @@ Weather::~Weather(void)
 
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
-	//draw_gradient(cc, dc, VP, box);
 	draw_refuge_places(cc, dc, VP, box);
+	if (cc->GetDrawWaveHeightEnabled()) {
+		draw_gradient(cc, dc, VP, box);
+	}
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
 	}

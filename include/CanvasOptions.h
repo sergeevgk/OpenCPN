@@ -71,7 +71,8 @@ enum {
 	ID_SHIPL,
 	ID_SHIPDELTA,
 	ID_SHIPSPEED,
-	ID_SHIPDRAFT
+	ID_SHIPDRAFT,
+	IDCO_DRAW_WAVE_HEIGHT
 };
 
 class MyFrame;
@@ -117,7 +118,7 @@ private:
 
 	wxSlider *pSliderDangerHeight;
 	wxChoice *pChoiceDateTime, *pChoiceStartTime;
-	wxCheckBox *pCBCheckRoute, *pCBCalculateRoute, *pCBCheckOptimalRoute;
+	wxCheckBox *pCBDrawWaveHeight, *pCBCheckRoute, *pCBCalculateRoute, *pCBCheckOptimalRoute;
 	wxTimePickerCtrl *pThreeHoursTime;
 	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta, *pShipSpeed, *pShipDraft;
     

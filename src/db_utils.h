@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include "refuge_place.h"
+#include "ship_class.h"
 
 namespace DbUtils 
 {
@@ -22,6 +23,8 @@ class DbContext {
 
 		int SeedDefaultData();
 		std::vector<WeatherUtils::RefugePlace> QuerySafePlaceData();
+		std::vector<WeatherUtils::ShipClass> QueryShipClasses();
+		int GetWaveHeightByShipClass(std::string ship_class);
 	private:
 		//int callback(void *data, int argc, char **argv, char **azColName);
 	};

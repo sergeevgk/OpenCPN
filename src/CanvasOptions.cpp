@@ -96,6 +96,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
     int border_size = 4;
     int group_item_spacing = 0;
     int interGroupSpace = border_size * 2;
+    int interBoxSpace = 5;
     
     wxSizerFlags verticalInputFlags = wxSizerFlags(0).Align(wxALIGN_LEFT).Expand().Border(wxALL, group_item_spacing);
     wxSizerFlags inputFlags = wxSizerFlags(0).Align(wxALIGN_LEFT).Border(wxALL, group_item_spacing);
@@ -126,13 +127,22 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 //     // spacer
 //     generalSizer->Add(0, interGroupSpace);
 
-
 	// Weather Mode
 	wxStaticBoxSizer* boxWeatherMode = new wxStaticBoxSizer(new wxStaticBox(pDisplayPanel, wxID_ANY, _("Weather Mode")), wxVERTICAL);
 	generalSizer->Add(boxWeatherMode, 0, wxALL | wxEXPAND, border_size);
 	//wxRadioButton *pWaveHeight, *pRippleHeight, *WaveRippleHeight, *pWind;
 	wxBoxSizer* rowOrientationWeather = new wxBoxSizer(wxVERTICAL);
 	boxWeatherMode->Add(rowOrientationWeather);
+
+	rowOrientationWeather->AddSpacer(interBoxSpace);
+
+	pCBDrawWaveHeight = new wxCheckBox(pDisplayPanel, IDCO_DRAW_WAVE_HEIGHT, _("Wave height gradient"));
+	rowOrientationWeather->Add(pCBDrawWaveHeight, verticalInputFlags);
+	pCBDrawWaveHeight->SetValue(false);
+	pCBDrawWaveHeight->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+	
+	rowOrientationWeather->AddSpacer(interBoxSpace);
+
 
 	pWaveHeight = new wxRadioButton(pDisplayPanel, wxID_ANY, _("Wave Height"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP);
 	rowOrientationWeather->Add(pWaveHeight, inputFlags);
@@ -145,6 +155,8 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	pWaveRippleHeight = new wxRadioButton(pDisplayPanel, IDCO_WAVERIPPLEHEIGHTCHECKBOX, _("Wave + Ripple Height"));
 	rowOrientationWeather->Add(pWaveRippleHeight, wxSizerFlags(0).Align(wxALIGN_LEFT).Border(wxLEFT, group_item_spacing * 2));
 	pWaveRippleHeight->Connect(wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+	
+	rowOrientationWeather->AddSpacer(interBoxSpace);
 
 
 #if !defined(__WXOSX__)  
@@ -162,8 +174,9 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	rowOrientationWeather->Add(pSliderDangerHeight, inputFlags);
 	pSliderDangerHeight->Connect(wxEVT_SLIDER, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
-	//pChoiceDateTime
+	rowOrientationWeather->AddSpacer(interBoxSpace);
 
+	//pChoiceDateTime
 	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Date \& Time")), inputFlags);
 
 	pChoiceDateTime = new wxChoice();
@@ -186,6 +199,8 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	}
 	pChoiceDateTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 	
+	rowOrientationWeather->AddSpacer(interBoxSpace);
+
 	pCBCheckRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKROUTE, _("Check Route"));
 	rowOrientationWeather->Add(pCBCheckRoute, verticalInputFlags);
 	pCBCheckRoute->SetValue(false);
@@ -201,6 +216,7 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	pCBCheckOptimalRoute->SetValue(false);
 	pCBCheckOptimalRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
+	rowOrientationWeather->AddSpacer(interBoxSpace);
 
 	rowOrientationWeather->Add(new wxStaticText(pDisplayPanel, wxID_ANY, _("Start Time")), inputFlags);
 
@@ -223,6 +239,8 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 		pChoiceStartTime->Show();
 	}
 	pChoiceStartTime->Connect(wxEVT_CHOICE, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+
+	rowOrientationWeather->AddSpacer(interBoxSpace);
 
 	time_t tempi(10);
 	wxDateTime zero(tempi);
@@ -498,13 +516,13 @@ void CanvasOptions::RefreshControlValues( void )
 		 }
 	 }
 
+	pCBDrawWaveHeight->SetValue(parentCanvas->GetDrawWaveHeightEnabled());
 	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
+	pCBCalculateRoute->SetValue(parentCanvas->GetCalculateRouteEnabled());
+	pCBCheckOptimalRoute->SetValue(parentCanvas->GetCheckOptimalRoute());
 
 	wxDateTime tempThreeHours(wxDateTime((time_t)parentCanvas->GetStartTimeThreeHours()).ToUTC());
 	pThreeHoursTime->SetValue(tempThreeHours);
-
-	pCBCalculateRoute->SetValue(parentCanvas->GetCalculateRouteEnabled());
-	pCBCheckOptimalRoute->SetValue(parentCanvas->GetCheckOptimalRoute());
 
 	pShipDangerHeight->SetValue(parentCanvas->GetShipDangerHeight());
 
@@ -719,6 +737,11 @@ void CanvasOptions::UpdateCanvasOptions( void )
 	if (tempStart.ToStdString() != parentCanvas->GetStartTime()) {
 		parentCanvas->SetStartTime(tempStart.ToStdString());
 		//b_needReLoad = true;
+	}
+
+	if (pCBDrawWaveHeight->GetValue() != parentCanvas->GetDrawWaveHeightEnabled()) {
+		parentCanvas->SetDrawWaveHeightEnabled(!parentCanvas->GetDrawWaveHeightEnabled());
+		b_needReLoad = true;
 	}
 
 	if (pCBCheckRoute->GetValue() != parentCanvas->GetCheckRouteEnabled()) {

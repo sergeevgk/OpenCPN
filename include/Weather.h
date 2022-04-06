@@ -131,6 +131,7 @@ private:
 	 std::vector <std::pair<std::string, std::vector<std::vector<PointWeatherData>>>> grid_data;//25 блоков, каждый блок - пара из времени и двумерного массива поинтов
 	 DbUtils::DbContext* db_context;
 	 std::vector<WeatherUtils::RefugePlace> refuge_place_vector;
+	 std::vector<WeatherUtils::ShipClass> ship_class_vector;
 	 // optimal route which consists of pairs <time, pair <lat_index, lon_index> >
 	 // lat/lon indices are from weather grid
 	 std::vector<std::pair<double, std::pair<int, int>>> last_optimal_path;

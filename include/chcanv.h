@@ -480,6 +480,8 @@ public:
 	  void SetDateTimeChoices(std::vector<std::string> choices) { 
 		  m_data_time_choices = choices; 
 	  }
+	  bool GetDrawWaveHeightEnabled() { return m_is_draw_wave_height_enabled; }
+	  void SetDrawWaveHeightEnabled(bool is_enabled) { m_is_draw_wave_height_enabled = is_enabled; }
 	  bool GetCheckRouteEnabled() { return m_is_check_route_enabled; }
 	  void SetCheckRouteEnabled(bool is_enabled) { m_is_check_route_enabled = is_enabled; }
 	  bool GetCalculateRouteEnabled() { return m_is_calculate_route_enabled; }
@@ -906,6 +908,7 @@ private:
 	  std::string m_date_time;
 	  std::string m_start_time;
 	  std::vector<std::string> m_data_time_choices;
+	  bool		  m_is_draw_wave_height_enabled;
 	  bool		  m_is_check_route_enabled;
 	  bool		  m_is_calculate_route_enabled;
 	  bool		  m_is_check_optimal_route_enabled;
