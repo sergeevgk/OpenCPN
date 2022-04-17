@@ -48,6 +48,7 @@
 #include "emboss_data.h"
 #include "S57Sector.h"
 #include "gshhs.h"
+#include "Weather.h"
 
 class wxGLContext;
 class GSHHSChart;
@@ -403,7 +404,8 @@ public:
       int         m_upMode;
       bool        m_bLookAhead;
       double      m_VPRotate;
-      
+	  Weather	   weather;
+
       void DrawBlinkObjects( void );
 
       void StartRoute(void);
@@ -715,7 +717,8 @@ private:
 
       void GridDraw(ocpnDC& dc); // Display lat/lon Grid in chart display
       void ScaleBarDraw( ocpnDC& dc );
-
+	  
+	  void DrawWeather(ocpnDC &dc, ViewPort &vp);
       void DrawOverlayObjects ( ocpnDC &dc, const wxRegion& ru );
 
       emboss_data *EmbossDepthScale();
@@ -976,7 +979,6 @@ private:
       wxRect       m_scaleBarRect;
       bool         m_bShowCompassWin;
       bool         m_pianoFrozen;
-
 
 DECLARE_EVENT_TABLE()
 };

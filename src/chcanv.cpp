@@ -10818,6 +10818,16 @@ emboss_data *ChartCanvas::EmbossOverzoomIndicator( ocpnDC &dc )
     return m_pEM_OverZoom;
 }
 
+void ChartCanvas::DrawWeather(ocpnDC &dc, ViewPort &vp)
+{
+	if (!m_toolbar_isweatherenabled)
+		return;
+
+	std::vector<std::string> choices = weather.GetChoicesDateTime();
+	SetDateTimeChoices(choices);
+	weather.Draw(this, dc, vp, vp.GetBBox());
+}
+
 void ChartCanvas::DrawOverlayObjects( ocpnDC &dc, const wxRegion& ru )
 {
     GridDraw( dc );
@@ -10879,6 +10889,8 @@ void ChartCanvas::DrawOverlayObjects( ocpnDC &dc, const wxRegion& ru )
         m_pAISRolloverWin->Draw(dc);
         m_brepaint_piano = true;
     }
+	// draw weather plugin
+	DrawWeather(dc, GetVP());
 }
 
 emboss_data *ChartCanvas::EmbossDepthScale()
