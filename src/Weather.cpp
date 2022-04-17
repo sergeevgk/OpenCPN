@@ -9,6 +9,8 @@
 
 #ifdef ocpnUSE_GL
 #include "glChartCanvas.h"
+#include <chrono>
+#include <thread>
 extern ocpnGLOptions g_GLOptions;
 #endif
 using namespace std;
@@ -20,13 +22,37 @@ extern TrackList    *pTrackList;
 extern wxString		g_default_wp_icon;
 extern WayPointman      *pWayPointMan;
 
+const std::string TimeMeasureFileName = "C:\\Users\\gosha\\Documents\\GitHub\\openCPN_temp\\time.txt";
+
+static void SaveKeyValueToFile(std::string fileName, std::string key, long long value) {
+	std::ofstream myfile;
+	myfile.open(TimeMeasureFileName, std::ofstream::app);
+	myfile << key << " : " << value;
+	myfile << std::endl;
+	myfile.close();
+}
+
+static long long GetMsFromTimePoints(chrono::time_point<chrono::steady_clock> start, chrono::time_point<chrono::steady_clock> end)
+{
+	return chrono::duration_cast<chrono::milliseconds>(end - start).count();
+}
+
+#pragma optimize("", off)
 Weather::Weather()
 {
 	db_context = new DbUtils::DbContext();
-	db_context->SeedDefaultData();
+	//db_context->SeedDefaultData();
+	auto end = chrono::steady_clock::now();
 	refuge_place_vector = db_context->QuerySafePlaceData();
 	ship_class_vector = db_context->QueryShipClasses();
+	auto start = chrono::steady_clock::now();
+
+	SaveKeyValueToFile(TimeMeasureFileName, "db_operations", GetMsFromTimePoints(end, start));
+	
+	//end = chrono::steady_clock::now();
 	//Weather::download_weather_from_esimo();
+	//start = chrono::steady_clock::now();
+	//SaveKeyValueToFile(TimeMeasureFileName, "data_download", GetMsFromTimePoints(end, start));
 
 
 	////data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
@@ -52,6 +78,8 @@ Weather::Weather()
 	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\lena_test_data.csv");
 
 	//get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
+	end = chrono::steady_clock::now();
+	
 	get_all_weather_date_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\test_data.csv");
 	create_data_grid();
 
@@ -59,8 +87,11 @@ Weather::Weather()
 	if (date_data[0].second.size() > 0) {
 		is_downloaded = true;
 	}
+	start = chrono::steady_clock::now();
+	SaveKeyValueToFile(TimeMeasureFileName, "data_preparation_no_download", GetMsFromTimePoints(end, start));
 
 }
+#pragma optimize("", on)
 
 Weather::~Weather(void)
 {
@@ -71,7 +102,10 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
 	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetDrawWaveHeightEnabled()) {
+		auto end = chrono::steady_clock::now();
 		draw_gradient(cc, dc, VP, box);
+		auto start = chrono::steady_clock::now();
+		SaveKeyValueToFile(TimeMeasureFileName, "draw_wave_gradient", GetMsFromTimePoints(end, start));
 	}
 	if (cc->GetCheckRouteEnabled()) {
 		draw_check_route(cc, dc, VP, box);
@@ -85,6 +119,8 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 }
 
 void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+
+	auto end = chrono::steady_clock::now();
 
 	if (cc->GetShipSpeed() <= 0) { return; }
 	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
@@ -117,6 +153,9 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 		bool buildEscapeRoute_OnConflict = true;
 		double start_time_shift = 0;
 		analyseRouteCheck(cc, dc, VP, box, pRouteDraw, start_time_shift, buildEscapeRoute_OnConflict);
+		
+		auto start = chrono::steady_clock::now();
+		SaveKeyValueToFile(TimeMeasureFileName, "draw_check_route", GetMsFromTimePoints(end, start));
 	}
 
 	//if (is_downloaded) {
@@ -960,6 +999,7 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 	if (cc->GetShipSpeed() <= 0) { return; }
 	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
 	if ((cc->GetStartTime() == "no data") || cc->GetStartTime() == "") return;
+	auto end = chrono::steady_clock::now();
 
 	for (wxRouteListNode *node = pRouteList->GetFirst();
 		node; node = node->GetNext()) {
@@ -991,6 +1031,9 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 		// save to last_optimal_path in order to use it in checking optimal route
 		last_optimal_path = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_grid);
+		auto start = chrono::steady_clock::now();
+		SaveKeyValueToFile(TimeMeasureFileName, "draw_calculate_optimal_route", GetMsFromTimePoints(end, start));
+
 	}
 
 	if (is_downloaded) {
@@ -1239,11 +1282,14 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 			lat_ind_path = lat_min_ind;
 			lon_ind_path = lon_min_ind;
 		}
+		auto end = chrono::steady_clock::now();
 
 		for (int i = 0; i < path.size(); i++) {
 			//print_path_step(cc, dc,VP, box, path[i].first, path[i].second);
 			print_path_step(cc, dc, VP, box, lat_min + ((double)path[i].second.first)/10, lon_min + ((double)path[i].second.second)/10);
 		}
+		auto start = chrono::steady_clock::now();
+		SaveKeyValueToFile(TimeMeasureFileName, "draw_optimal_route", GetMsFromTimePoints(end, start));
 
 		//if (is_downloaded) {
 		//	wxString msg = "\n               CALCULATE ROUTE   " + std::to_string((D[finish_lat_ind][finish_lon_ind]));
