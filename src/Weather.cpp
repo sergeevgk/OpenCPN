@@ -2,6 +2,7 @@
 
 #include "Weather.h"
 #include "weather_utils.h"
+#include "weather_render_utilities.h"
 #include "db_utils.h"
 #include "routeman.h"
 #include "navutil.h"
@@ -150,10 +151,19 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
 
-		bool buildEscapeRoute_OnConflict = true;
+		bool buildEscapeRouteOnConflict = true;
 		double start_time_shift = 0;
-		analyseRouteCheck(cc, dc, VP, box, pRouteDraw, start_time_shift, buildEscapeRoute_OnConflict);
+		auto checkData = analyseRouteCheck(cc, dc, VP, box, pRouteDraw, start_time_shift, buildEscapeRouteOnConflict);
 		
+		// TODO: render only first conflict point before building rescue root
+		checkData.Render(cc, dc, VP, box);
+		
+		// build rescue root from first conflict point
+		if (checkData.conflicts.size() > 0) {
+			RoutePoint rp = RoutePoint(checkData.conflicts[0].latitude, checkData.conflicts[0].longitude, g_default_wp_icon, "conflict point");
+			draw_find_refuge_roots(cc, dc, VP, box, rp, checkData.conflicts[0].shiftFromStartTime);
+		}
+
 		auto start = chrono::steady_clock::now();
 		SaveKeyValueToFile(TimeMeasureFileName, "draw_check_route", GetMsFromTimePoints(end, start));
 	}
@@ -170,8 +180,8 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 	//}
 }
 
-void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift, bool build_rescue_root, bool draw_cone_lines) {
-
+WeatherUtils::RouteCheckData Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift, bool build_rescue_root, bool draw_cone_lines) 
+{
 	wxRoutePointListNode *node = route->pRoutePointList->GetFirst();
 	RoutePoint *prp2 = node->GetData();
 
@@ -202,7 +212,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	
 	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, start_time_shift);
 	if (ind_start_time == -1) {
-		return;
+		return WeatherUtils::RouteCheckData();
 	}
 	std::string now_time = all_choices[ind_start_time];
 
@@ -213,7 +223,14 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 	//wxColour cl = wxColour(61, 61, 204, 255);
 	//dc.SetTextForeground(cl);
 	//dc.DrawText(msg, 100, 100);
+	auto ship = WeatherUtils::ShipProperties();
+	WeatherUtils::RouteCheckData routeCheckData(route, ship, ind_start_time);
 
+	if (WeatherUtils::CheckGetCachedRouteCheckData(route_check_data, route, ship, ind_start_time, &routeCheckData))
+	{
+		return routeCheckData;
+	};
+	
 	for (node = node->GetNext(); node; node = node->GetNext()) {
 		RoutePoint *prp1 = prp2;
 		prp2 = node->GetData();
@@ -278,7 +295,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 			double sum_waves = -1;
 			v = -1;
 			
-			check_land_collision(cc, dc, VP, box, prev_lat, prev_lon, s57ch);
+			check_land_collision(cc, dc, VP, box, prev_lat, prev_lon, s57ch, routeCheckData.conflicts, sum_time);
 
 			//check for waves and others
 			if (now_time != "no data" && now_time != "") {
@@ -303,13 +320,8 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 							std::string temp = "huge wave:" + std::to_string(sum_waves) + " in " + std::to_string(prev_lat) + " " + std::to_string(prev_lon);
 							errors += temp + "\n";
 
-							print_zone(cc, dc, VP, box, prev_lat, prev_lon);
-							// build rescue root from first conflict point
-							if (build_rescue_root) {
-								RoutePoint rp = RoutePoint(prev_lat, prev_lon, g_default_wp_icon, "conflict point");
-								draw_find_refuge_roots(cc, dc, VP, box, rp, sum_time);
-								return;
-							}
+							//WeatherUtils::print_zone(cc, dc, VP, box, prev_lat, prev_lon);
+							routeCheckData.conflicts.push_back(WeatherUtils::ConflictData(prev_lat, prev_lon, 0, sum_time));
 						}
 					}
 				}
@@ -389,7 +401,7 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 			}
 			// проверяем внутри него объекты на глубину
 			
-			check_depth_in_cone(s57ch, cc, dc, VP, box, start, end);
+			check_depth_in_cone(s57ch, cc, dc, VP, box, start, end, routeCheckData.conflicts, sum_time);
 
 			if (norm_lat > 0) {
 				prev_lat += delta_lat;
@@ -454,6 +466,8 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		double finishing_distance = sqrt((lon2 - prev_lon)*(lon2 - prev_lon) + (lat2 - prev_lat)*(lat2 - prev_lat));
 		sum_time += finishing_distance / v;
 	}
+	route_check_data.push_back(routeCheckData);
+
 	if (is_downloaded) {
 		std::string str = "                                   " + route->GetName() + "                                                                         time: " + std::to_string(sum_time) + errors;
 		//	wxString msg = "               CHECK ROUTE";
@@ -464,19 +478,23 @@ void Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const
 		dc.SetTextForeground(cl);
 		dc.DrawText(msg, 10, 10);
 	}
+	return routeCheckData;
 }
 
 // TODO: try another way to check "part_of_route - earth" collision
 // see PlugIn_GSHHS_CrossesLand function
-void Weather::check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart) {
+void Weather::check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
+	double lat, double lon, s57chart* chart, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time) {
 	double select_radius = 1e-4;
 	ListOfObjRazRules * map_objects = get_objects_at_lat_lon(lat, lon, select_radius, chart, &VP, MASK_AREA);
 	if (is_land_area(map_objects, chart)) {
-		print_zone(cc, dc, VP, box, lat, lon, wxColour(255, 0, 0, 255));
+		//WeatherUtils::print_zone(cc, dc, VP, box, lat, lon, wxColour(255, 0, 0, 255));
+		conflicts.push_back(WeatherUtils::ConflictData(lat, lon, 2, shift_time));
 	}
 }
 
-void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end){
+void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP,
+	const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time){
 	// начальное значение радиуса для поиска объектов
 	double draft = cc->GetShipDraft();
 	float draft_in_ft = draft; // unit of measurement. - ft. // единицы измерения - футы
@@ -495,11 +513,13 @@ void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, 
 			continue;
 
 		if (select_objects->Number() != 0 && !is_deep_enough(select_objects, chart, draft_in_ft)) {
-			print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			//WeatherUtils::print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			conflicts.push_back(WeatherUtils::ConflictData(point.m_x, point.m_y, 1, shift_time));
 		}
 
 		if (select_areas->Number() != 0 && !is_deep_enough_area(select_areas, chart, draft_in_ft)) {
-			print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			//WeatherUtils::print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
+			conflicts.push_back(WeatherUtils::ConflictData(point.m_x, point.m_y, 1, shift_time));
 		}
 	}
 	return;
@@ -754,51 +774,6 @@ bool Weather::is_same_colour(wxColour first, wxColour second) {
 		(first.Green() == second.Green());
 }
 
-void Weather::print_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour fill_colour) {
-	wxPoint r;
-	wxRect hilitebox;
-	wxColour default_colour = wxColour(0,0,0,0);
-
-	cc->GetCanvasPointPix(lat, lon, &r);
-
-	wxPen *pen;
-	pen = g_pRouteMan->GetRoutePointPen();
-
-	int sx2 = 2;
-	int sy2 = 2;
-
-	wxRect r1(r.x - sx2, r.y - sy2, sx2 * 2, sy2 * 2);           // the bitmap extents
-
-	hilitebox = r1;
-	hilitebox.x -= r.x;
-	hilitebox.y -= r.y;
-
-	float radius;
-	hilitebox.Inflate(4);
-	radius = 1.0f;
-
-	unsigned char transparency = 200;
-
-	//wxColour hi_colour = pen->GetColour();
-	//  Highlite any selected point
-
-	/*if (!is_same_colour(fill_colour, default_colour)) {
-		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
-			fill_colour, transparency);
-	}
-	else {
-		int red, green, blue;
-		green = 0;
-		red = 135;
-		blue = 135;
-		wxColour hi_colour(red, green, blue, 255);
-		AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
-			hi_colour, transparency);
-	}*/
-	AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
-		fill_colour, transparency);
-}
-
 void Weather::print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon) {
 	wxPoint r;
 	wxRect hilitebox;
@@ -846,10 +821,10 @@ void Weather::highlight_considered_grid(std::vector<std::vector<int>> &grid, Cha
 			 double lat = WeatherUtils::get_coordinate_from_index(i, lat_min);
 			 double lon = WeatherUtils::get_coordinate_from_index(j, lon_min);
 			 if (grid[i][j] == 0) {
-				 Weather::print_zone(cc, dc, VP, box, lat, lon, zone_color);
+				 WeatherUtils::print_zone(cc, dc, VP, box, lat, lon, zone_color);
 			 }
 			 if (grid[i][j] == 1) {
-				 Weather::print_zone(cc, dc, VP, box, lat, lon, zone_color);
+				 WeatherUtils::print_zone(cc, dc, VP, box, lat, lon, zone_color);
 			 }
 		 }
 	 }
@@ -959,12 +934,12 @@ void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas* cc, ocpnDC& dc
 		//checking weather conflicts 
 		if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100) {
 			// draw square of purple (conflict) color
-			print_zone(cc, dc, VP, box, lat, lon);
+			WeatherUtils::print_zone(cc, dc, VP, box, lat, lon);
 		}
 		//checking static conflicts on sections
 		else if (false) {
 			// draw square of purple (conflict) color
-			print_zone(cc, dc, VP, box, lat, lon);
+			WeatherUtils::print_zone(cc, dc, VP, box, lat, lon);
 		}
 		else {
 			// draw square of orange (safe route) color
@@ -1321,9 +1296,17 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 
 	std::vector<std::vector<PointWeatherData>> now_data = grid_data[index].second;
 
+	auto min_lat_ind = WeatherUtils::get_coordinate_index(box.GetMinLat(), lat_min);
+	auto max_lat_ind = WeatherUtils::get_coordinate_index(box.GetMaxLat(), lat_min);
+	auto min_lon_ind = WeatherUtils::get_coordinate_index(box.GetMinLon(), lon_min);
+	auto max_lon_ind = WeatherUtils::get_coordinate_index(box.GetMaxLon(), lon_min);
+	if (min_lat_ind < 0) min_lat_ind = 0;
+	if (min_lon_ind < 0) min_lon_ind = 0;
+	if (max_lat_ind > now_data.size()) max_lat_ind = now_data.size();
+	//if (max_lon_ind > now_data[0].size()) max_lon_ind = now_data[i].size();
 
-	for (int i = 0; i < now_data.size(); i++) {
-		for (int j = 0; j < now_data[i].size(); j++) {
+	for (int i = min_lat_ind; i < max_lat_ind; i++) {
+		for (int j = min_lon_ind; j < max_lon_ind; j++) {
 			wxPoint r;
 			wxRect hilitebox;
 
@@ -1497,7 +1480,7 @@ void Weather::draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPor
 			double lat = WeatherUtils::get_coordinate_from_index(step.second.first, lat_min);
 			double lon = WeatherUtils::get_coordinate_from_index(step.second.second, lon_min);
 			// draw conflict area
-			print_zone(cc, dc, VP, box, lat, lon);
+			WeatherUtils::print_zone(cc, dc, VP, box, lat, lon);
 			//draw_find routes to refuge places (at least one)
 			auto pos = RoutePoint(lat, lon, g_default_wp_icon, "conflict_position");
 			draw_find_refuge_roots(cc, dc, VP, box, pos, sum_time);
