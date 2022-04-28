@@ -39,7 +39,6 @@ namespace WeatherUtils {
 	// @param v speed in knots
 	// returns angle in radian
 	double calculate_cone_angle(double v);
-	void draw_line_on_map(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double start_lat, double start_lon, double end_lat, double end_lon, wxColour color);
 	void draw_considered_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> zone_points);
 	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> create_considered_zone_from_route(Route* route);
 	int get_coordinate_index(double coord, double coord_min);

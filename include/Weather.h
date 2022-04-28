@@ -22,6 +22,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include <curl/curl.h>
 #include "cm93.h"
 #include "db_utils.h"
+#include "RouteCheckData.h"
 
 class HyperlinkList;
 class ChartCanvas;
@@ -85,7 +86,6 @@ private:
 	double do_work(const std::string& str);
 	void draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_refuge_places(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
-	void print_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, wxColour colour = wxColour(135,0,135,255));
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time);
@@ -107,14 +107,16 @@ private:
 	static size_t write_data(void *ptr, size_t size, size_t nmemb, FILE *stream);
 	static bool download_weather_from_esimo();
 	void create_data_grid();
-	void analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift = 0, bool build_rescue_root = false, bool draw_cone_lines = true);
+	WeatherUtils::RouteCheckData analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift = 0, bool build_rescue_root = false, bool draw_cone_lines = true);
 	std::vector<std::pair<double, std::pair<int, int>>> find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double actual_start_time = 0);
 	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
-	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon, s57chart* chart);
+	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
+		double lat, double lon, s57chart* chart, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time);
 	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
 	bool is_deep_enough_area(ListOfObjRazRules *list, s57chart* chart, float draft);
-	void check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
+	void check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
+		wxPoint2DDouble start, wxPoint2DDouble end, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time);
 	bool is_depth_in_cone_enough(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);
 	bool is_land_area(ListOfObjRazRules *list, s57chart * chart);
 	bool is_same_colour(wxColour first, wxColour second);
@@ -141,5 +143,8 @@ private:
 	 double lat_max;
 	 double lon_min;
 	 double lon_max;
+
+	 /// cached data for optimisation
+	 std::vector<WeatherUtils::RouteCheckData> route_check_data;
 };
 #endif
