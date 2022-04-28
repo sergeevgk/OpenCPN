@@ -69,7 +69,6 @@ xcopy data\license.txt build\Release\ /D /S /E /I /F /Y
 ::xcopy buildwin\crashrpt\crashrpt_lang.ini build\Release\ /D /S /I /F /Y
 Echo:
 
-GOTO End
 ::C:\Builds\OCPN\OpenCPN\build\RelWithDebInfo
 Echo RelWithDebInfo files:
 if not exist build\Release md build\RelWithDebInfo
