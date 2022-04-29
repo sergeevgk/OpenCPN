@@ -857,19 +857,15 @@ void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, 
 	pRoute->AddPoint(&p);
 
 	auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
-	auto considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRoute);
 
-	highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 	// don't save to last_optimal_path
-	auto r = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid, rescue_start_time);
+	auto routeBuildData = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_builder, rescue_start_time);
 
 	// if route was not found - increase width of considered zone x2 (once)
-	if (r.size() == 0) {
+	if (routeBuildData.optimal_path.size() == 0) {
 		considered_zone_builder.increase_zone_width(2);
-		considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRoute);
-		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 		// don't save to last_optimal_path
-		r = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_grid, rescue_start_time);
+		routeBuildData = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_builder, rescue_start_time);
 
 		// if not found - try get another (next by distance) refuge place
 		// TODO - later
@@ -882,7 +878,7 @@ void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, 
 }
 
 // this method is draft and currently not used
-void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas* cc, ocpnDC& dc, ViewPort& VP, const LLBBox& box, Route* route, vector<vector<int>> consideredZoneGrid, double rescue_start_time)
+void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas* cc, ocpnDC& dc, ViewPort& VP, const LLBBox& box, Route* route, vector<vector<int>> considered_zone_grid, double rescue_start_time)
 {
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
@@ -996,13 +992,13 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 		if (weather_grid.IntersectOut(pRouteDraw->GetBBox())) continue;
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
-		
+	
 		auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
-		auto considered_zone_grid = considered_zone_builder.BuildConsideredZoneFromRoute(pRouteDraw);
-
-		highlight_considered_grid(considered_zone_grid, cc, dc, VP, box);
 		// save to last_optimal_path in order to use it in checking optimal route
-		last_optimal_path = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_grid);
+		auto routeBuildData = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_builder);
+		last_optimal_path = routeBuildData.optimal_path;
+
+		routeBuildData.Render(cc, dc, VP, box);
 		auto start = chrono::steady_clock::now();
 		SaveKeyValueToFile(TimeMeasureFileName, "draw_calculate_optimal_route", GetMsFromTimePoints(end, start));
 
@@ -1036,21 +1032,21 @@ bool Weather::is_in_weather_grid(int lat_ind, int lon_ind) {
 //
 // Returns an optimal path of grid cells indices if such exists for particular route.
 //
-vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double start_time_shift) {
+WeatherUtils::RouteBuildData Weather::find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, WeatherUtils::ConsideredZoneBuilder zone_builder, double start_time_shift) {
 	ChartBase *chart = cc->GetChartAtCursor();
 	s57chart *s57ch = NULL;
 	if (chart) {
 		s57ch = dynamic_cast<s57chart*>(chart);
 	}
-	auto empty_vector = vector<pair<double, pair<int, int>>>();
+	auto empty_result = WeatherUtils::RouteBuildData(lat_min, lon_min);
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
 
 	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
 	RoutePoint *finish = node_finish->GetData();
 
-	if (!is_in_weather_area(start->m_lat, start->m_lon)) return empty_vector;
-	if (!is_in_weather_area(finish->m_lat, finish->m_lon)) return empty_vector;
+	if (!is_in_weather_area(start->m_lat, start->m_lon)) return empty_result;
+	if (!is_in_weather_area(finish->m_lat, finish->m_lon)) return empty_result;
 
 	double v_nominal = cc->GetShipSpeed();
 
@@ -1068,8 +1064,18 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 
 	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, start_time_shift);
 	if (ind_start_time == -1) {
-		return empty_vector;
+		return empty_result;
 	}
+
+	auto ship = WeatherUtils::ShipProperties(cc->GetShipDangerHeight(), cc->GetShipN(), cc->GetShipD(), cc->GetShipL(), cc->GetShipDelta(), v_nominal, cc->GetShipDraft());
+	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, start, finish, ship, ind_start_time);
+
+	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, start, finish, ship, ind_start_time, &routeBuildData))
+	{
+		return routeBuildData;
+	};
+
+	auto considered_zone = zone_builder.BuildConsideredZoneFromRoute(route);
 
 	double start_grid_lat = std::round(start->m_lat * 10) / 10;
 	double start_grid_lon = std::round(start->m_lon * 10) / 10;
@@ -1254,26 +1260,12 @@ vector<pair<double, pair<int, int>>> Weather::find_fast_route(ChartCanvas *cc, o
 			lat_ind_path = lat_min_ind;
 			lon_ind_path = lon_min_ind;
 		}
-		auto end = chrono::steady_clock::now();
-
-		for (int i = 0; i < path.size(); i++) {
-			//print_path_step(cc, dc,VP, box, path[i].first, path[i].second);
-			print_path_step(cc, dc, VP, box, lat_min + ((double)path[i].second.first)/10, lon_min + ((double)path[i].second.second)/10);
-		}
-		auto start = chrono::steady_clock::now();
-		SaveKeyValueToFile(TimeMeasureFileName, "draw_optimal_route", GetMsFromTimePoints(end, start));
-
-		//if (is_downloaded) {
-		//	wxString msg = "\n               CALCULATE ROUTE   " + std::to_string((D[finish_lat_ind][finish_lon_ind]));
-		//	wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-		//	dc.SetFont(*g_pFontSmall);
-		//	wxColour cl = wxColour(61, 61, 204, 255);
-		//	dc.SetTextForeground(cl);
-		//	dc.DrawText(msg, 10, 10);
-		//}
-		return path;
+		routeBuildData.optimal_path = path;
+		routeBuildData.considered_zone_grid = considered_zone;
+		route_build_data.push_back(routeBuildData);
+		return routeBuildData;
 	}
-	return empty_vector;
+	return empty_result;
 }
 
 void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {

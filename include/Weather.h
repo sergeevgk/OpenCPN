@@ -23,6 +23,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include "cm93.h"
 #include "db_utils.h"
 #include "RouteCheckData.h"
+#include "RouteBuildData.h"
 
 class HyperlinkList;
 class ChartCanvas;
@@ -89,7 +90,7 @@ private:
 	void print_path_step(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, double lat, double lon);
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time);
-	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, std::vector<std::vector<int>> consideredZoneGrid, double rescue_start_time);
+	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, std::vector<std::vector<int>> considered_zone_grid, double rescue_start_time);
 	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, double rescue_start_time);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<double, std::pair<int, int>>> optimal_route);
@@ -108,7 +109,7 @@ private:
 	static bool download_weather_from_esimo();
 	void create_data_grid();
 	WeatherUtils::RouteCheckData analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift = 0, bool build_rescue_root = false, bool draw_cone_lines = true);
-	std::vector<std::pair<double, std::pair<int, int>>> find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, std::vector<std::vector<int>> &considered_zone, double actual_start_time = 0);
+	WeatherUtils::RouteBuildData find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, WeatherUtils::ConsideredZoneBuilder zone_builder, double actual_start_time = 0);
 	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
@@ -146,5 +147,6 @@ private:
 
 	 /// cached data for optimisation
 	 std::vector<WeatherUtils::RouteCheckData> route_check_data;
+	 std::vector<WeatherUtils::RouteBuildData> route_build_data;
 };
 #endif

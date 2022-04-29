@@ -37,7 +37,7 @@ namespace WeatherUtils
 		/// key properties for cache cheks
 		Route* route;
 		ShipProperties ship;
-		int startTimeIndex;
+		int start_time_index;
 		/// cached data
 	public:
 		vector<ConflictData> conflicts;
@@ -46,7 +46,7 @@ namespace WeatherUtils
 		{
 		}
 
-		RouteCheckData(Route* route, ShipProperties& ship, int startTimeIndex) : ship(ship), startTimeIndex(startTimeIndex) 
+		RouteCheckData(Route* route, ShipProperties& ship, int start_time_index) : ship(ship), start_time_index(start_time_index) 
 		{
 			this->route = new Route();
 			CloneRoute(this->route, route, 1, route->GetnPoints(), "cloned");
@@ -55,10 +55,10 @@ namespace WeatherUtils
 		}
 
 		virtual ~RouteCheckData(){};
-		bool CheckCachedVersion(Route* route, ShipProperties& ship, int startTimeIndex) {
+		bool CheckCachedVersion(Route* route, ShipProperties& ship, int start_time_index) {
 			return this->route->IsEqualTo(route) &&
 				this->ship == ship &&
-				this->startTimeIndex == startTimeIndex;
+				this->start_time_index == start_time_index;
 		}
 		
 		bool CheckStaleCachedVersion(RouteCheckData& data) {
@@ -105,7 +105,7 @@ namespace WeatherUtils
 	// TODO: needs some revision how to implement stale data checking
 	void RemoveStaleCachedRouteCheckData(vector<RouteCheckData>& items, RouteCheckData& data);
 
-	bool CheckGetCachedRouteCheckData(vector<RouteCheckData>& items, Route* route, ShipProperties& ship, int startTimeIndex, RouteCheckData *dst);
+	bool CheckGetCachedRouteCheckData(vector<RouteCheckData>& items, Route* route, ShipProperties& ship, int start_time_index, RouteCheckData *dst);
 }
 
 #endif
