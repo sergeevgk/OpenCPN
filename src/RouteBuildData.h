@@ -75,7 +75,7 @@ namespace WeatherUtils
 		}
 
 		RoutePoint* CopyRoutePoint(RoutePoint* src) {
-			return new RoutePoint(src->GetLatitude(), src->GetLongitude(), src->GetIconName(), src->GetName());
+			return new RoutePoint(src->GetLatitude(), src->GetLongitude(), src->GetIconName(), src->GetName(), wxEmptyString, false);
 		}
 	};
 

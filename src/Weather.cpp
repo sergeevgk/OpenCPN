@@ -160,24 +160,13 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 		
 		// build rescue root from first conflict point
 		if (buildEscapeRouteOnConflict && checkData.conflicts.size() > 0) {
-			RoutePoint rp = RoutePoint(checkData.conflicts[0].latitude, checkData.conflicts[0].longitude, g_default_wp_icon, "conflict point");
+			RoutePoint rp = RoutePoint(checkData.conflicts[0].latitude, checkData.conflicts[0].longitude, g_default_wp_icon, "conflict point", wxEmptyString, false);
 			draw_find_refuge_roots(cc, dc, VP, box, rp, checkData.conflicts[0].shiftFromStartTime);
 		}
 
 		auto start = chrono::steady_clock::now();
 		SaveKeyValueToFile(TimeMeasureFileName, "draw_check_route", GetMsFromTimePoints(end, start));
 	}
-
-	//if (is_downloaded) {
-	//	std::string str = "               CHECK ROUTE " + std::to_string(cc->GetStartTimeThreeHours()) + " " + std::to_string(cc->GetShipDangerHeight()) + " " + std::to_string(cc->GetShipN()) + " " + std::to_string(cc->GetShipD()) + " " + std::to_string(cc->GetShipL()) + " " + std::to_string(cc->GetShipDelta());
-	////	wxString msg = "               CHECK ROUTE";
-	//	wxString msg(str);
-	//	wxFont* g_pFontSmall = new wxFont(8, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL);
-	//	dc.SetFont(*g_pFontSmall);
-	//	wxColour cl = wxColour(61, 61, 204, 255);
-	//	dc.SetTextForeground(cl);
-	//	dc.DrawText(msg, 10, 10);
-	//}
 }
 
 WeatherUtils::RouteCheckData Weather::analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift, bool build_rescue_root, bool draw_cone_lines) 
@@ -853,7 +842,7 @@ void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, 
 	int nearest_index = get_next_nearest_refuge_place_index(refuge_place_vector, current_position);
 	auto refuge = refuge_place_vector[nearest_index];
 
-	RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name);
+	RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name, wxEmptyString, false);
 	pRoute->AddPoint(&p);
 
 	auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
@@ -1471,7 +1460,7 @@ void Weather::draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPor
 			// draw conflict area
 			WeatherUtils::print_zone(cc, dc, VP, box, lat, lon);
 			//draw_find routes to refuge places (at least one)
-			auto pos = RoutePoint(lat, lon, g_default_wp_icon, "conflict_position");
+			auto pos = RoutePoint(lat, lon, g_default_wp_icon, "conflict_position", wxEmptyString, false);
 			draw_find_refuge_roots(cc, dc, VP, box, pos, sum_time);
 		}
 	}
