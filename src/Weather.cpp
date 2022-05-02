@@ -1057,9 +1057,9 @@ WeatherUtils::RouteBuildData Weather::find_fast_route(ChartCanvas *cc, ocpnDC& d
 	}
 
 	auto ship = WeatherUtils::ShipProperties(cc->GetShipDangerHeight(), cc->GetShipN(), cc->GetShipD(), cc->GetShipL(), cc->GetShipDelta(), v_nominal, cc->GetShipDraft());
-	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, start, finish, ship, ind_start_time);
+	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, route, ship, ind_start_time);
 
-	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, start, finish, ship, ind_start_time, &routeBuildData))
+	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, route, ship, ind_start_time, &routeBuildData))
 	{
 		return routeBuildData;
 	};

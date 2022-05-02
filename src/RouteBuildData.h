@@ -18,8 +18,9 @@ namespace WeatherUtils
 		double lon_min;
 
 		///cache key
-		RoutePoint* start;
-		RoutePoint* finish;
+		/*RoutePoint* start;
+		RoutePoint* finish;*/
+		Route* route;
 		ShipProperties ship;
 		int start_time_index;
 	public:
@@ -28,11 +29,13 @@ namespace WeatherUtils
 		vector<pair<double, pair<int, int>>> optimal_path;
 
 		RouteBuildData(double lat_min, double lon_min) : lat_min(lat_min), lon_min(lon_min) {}
-		RouteBuildData(double lat_min, double lon_min, RoutePoint* start, RoutePoint* finish, ShipProperties &ship, int start_time_index) : 
+		RouteBuildData(double lat_min, double lon_min, Route* route, ShipProperties &ship, int start_time_index) :
 			lat_min(lat_min), lon_min(lon_min), ship(ship), start_time_index(start_time_index)
 		{
-			this->start = CopyRoutePoint(start);
-			this->finish = CopyRoutePoint(finish);
+			/*this->start = CopyRoutePoint(start);
+			this->finish = CopyRoutePoint(finish);*/
+			this->route = new Route();
+			CloneRoute(this->route, route, 1, route->GetnPoints(), "cloned");
 		}
 		virtual ~RouteBuildData() 
 		{
@@ -40,9 +43,8 @@ namespace WeatherUtils
 			optimal_path.clear();
 		};
 		
-		bool CheckCachedVersion(RoutePoint* start, RoutePoint* finish, ShipProperties& ship, int start_time_index) {
-			return this->start->IsSame(start) &&
-				this->finish->IsSame(finish) &&
+		bool CheckCachedVersion(Route* route, ShipProperties& ship, int start_time_index) {
+			return this->route->IsEqualTo(route) &&
 				this->ship == ship &&
 				this->start_time_index == start_time_index;
 		}
@@ -77,9 +79,25 @@ namespace WeatherUtils
 		RoutePoint* CopyRoutePoint(RoutePoint* src) {
 			return new RoutePoint(src->GetLatitude(), src->GetLongitude(), src->GetIconName(), src->GetName(), wxEmptyString, false);
 		}
+
+		void CloneRoute(Route *pdestroute, Route *psourceroute, int start_nPoint, int end_nPoint, const wxString & suffix)
+		{
+			pdestroute->m_RouteNameString = psourceroute->m_RouteNameString + suffix;
+			pdestroute->m_RouteStartString = psourceroute->m_RouteStartString;
+			pdestroute->m_RouteEndString = psourceroute->m_RouteEndString;
+			int i;
+			for (i = start_nPoint; i <= end_nPoint; i++)
+			{
+				RoutePoint *psourcepoint = psourceroute->GetPoint(i);
+				RoutePoint *ptargetpoint = new RoutePoint(psourcepoint->m_lat, psourcepoint->m_lon,
+					psourcepoint->GetIconName(), psourcepoint->GetName(), wxEmptyString, false);
+
+				pdestroute->AddPoint(ptargetpoint, false);
+			}
+		}
 	};
 
-	bool CheckGetCachedRouteBuildData(vector<RouteBuildData>& items, RoutePoint* start, RoutePoint* finish, ShipProperties& ship, int start_time_index, RouteBuildData *dst);
+	bool CheckGetCachedRouteBuildData(vector<RouteBuildData>& items, Route* route, ShipProperties& ship, int start_time_index, RouteBuildData *dst);
 }
 
 #endif
