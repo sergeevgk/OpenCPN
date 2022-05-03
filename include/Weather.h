@@ -24,6 +24,7 @@ Author:   Ilina Elena (ferr.98@mail.ru)
 #include "db_utils.h"
 #include "RouteCheckData.h"
 #include "RouteBuildData.h"
+#include "RefugeRouteData.h"
 
 class HyperlinkList;
 class ChartCanvas;
@@ -91,7 +92,7 @@ private:
 	void draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time);
 	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, std::vector<std::vector<int>> considered_zone_grid, double rescue_start_time);
-	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, double rescue_start_time);
+	WeatherUtils::RouteCheckData draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, double rescue_start_time);
 	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
 	void draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<double, std::pair<int, int>>> optimal_route);
 	void get_all_weather_date_data(const std::string& path);
@@ -148,5 +149,6 @@ private:
 	 /// cached data for optimisation
 	 std::vector<WeatherUtils::RouteCheckData> route_check_data;
 	 std::vector<WeatherUtils::RouteBuildData> route_build_data;
+	 std::vector<WeatherUtils::RefugeRouteData> route_refuge_data;
 };
 #endif

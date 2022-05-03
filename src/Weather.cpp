@@ -151,7 +151,7 @@ void Weather::draw_check_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const 
 
 		if (VP.GetBBox().IntersectOut(pRouteDraw->GetBBox()) || (!pRouteDraw->IsVisible())) continue;
 
-		bool buildEscapeRouteOnConflict = false;
+		bool buildEscapeRouteOnConflict = true;
 		double start_time_shift = 0;
 		auto checkData = analyseRouteCheck(cc, dc, VP, box, pRouteDraw, start_time_shift, buildEscapeRouteOnConflict);
 		
@@ -835,35 +835,51 @@ int Weather::get_next_nearest_refuge_place_index(std::vector<WeatherUtils::Refug
 }
 
 void Weather::draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint current_position, double rescue_start_time) {
-	Route *pRoute = new Route();
-	pRoute->AddPoint(&current_position);
-	
+	Route pRoute = Route();
+	pRoute.AddPoint(&current_position);
+
 	// find next nearest refuge place
 	int nearest_index = get_next_nearest_refuge_place_index(refuge_place_vector, current_position);
 	auto refuge = refuge_place_vector[nearest_index];
 
 	RoutePoint p = RoutePoint(refuge.latitude, refuge.longitude, g_default_wp_icon, refuge.name, wxEmptyString, false);
-	pRoute->AddPoint(&p);
+	pRoute.AddPoint(&p);
 
-	auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
+	auto ship = WeatherUtils::ShipProperties(cc->GetShipDangerHeight(), cc->GetShipN(), cc->GetShipD(), cc->GetShipL(), cc->GetShipDelta(), cc->GetShipSpeed(), cc->GetShipDraft());
+	auto start = WeatherUtils::SimpleRoutePoint(current_position.GetLatitude(), current_position.GetLongitude());
+	auto finish = WeatherUtils::SimpleRoutePoint(refuge.latitude, refuge.longitude);
 
-	// don't save to last_optimal_path
-	auto routeBuildData = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_builder, rescue_start_time);
+	WeatherUtils::RefugeRouteData refugeRoute;
+	if (!WeatherUtils::CheckGetCachedRouteRefugeData(route_refuge_data, &start, &finish, ship, rescue_start_time, &refugeRoute)) {
+		refugeRoute = WeatherUtils::RefugeRouteData(lat_min, lon_min, start, finish, ship, rescue_start_time);
+		auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
 
-	// if route was not found - increase width of considered zone x2 (once)
-	if (routeBuildData.optimal_path.size() == 0) {
-		considered_zone_builder.increase_zone_width(2);
 		// don't save to last_optimal_path
-		routeBuildData = find_fast_route(cc, dc, VP, box, pRoute, considered_zone_builder, rescue_start_time);
+		auto routeBuildData = find_fast_route(cc, dc, VP, box, &pRoute, considered_zone_builder, rescue_start_time);
 
-		// if not found - try get another (next by distance) refuge place
-		// TODO - later
+		// if route was not found - increase width of considered zone x2 (once)
+		if (routeBuildData.optimal_path.size() == 0) {
+			considered_zone_builder.increase_zone_width(2);
+			// don't save to last_optimal_path
+			routeBuildData = find_fast_route(cc, dc, VP, box, &pRoute, considered_zone_builder, rescue_start_time);
 
-		// if still not found - build simple route with marked conflicts
-		draw_simple_refuge_root_with_conflicts(cc, dc, VP, box, pRoute, rescue_start_time);
+			// TODO - if not found - try get another (next by distance) refuge place
+
+			// if still not found - build simple route with marked conflicts
+			if (routeBuildData.optimal_path.size() == 0) {
+				auto conflictsPath = draw_simple_refuge_root_with_conflicts(cc, dc, VP, box, &pRoute, rescue_start_time);
+				refugeRoute.SetConflictsPath(conflictsPath.conflicts, routeBuildData.considered_zone_grid);
+			}
+			else {
+				refugeRoute.SetOptimalPath(routeBuildData);
+			}
+		}
+		else {
+			refugeRoute.SetOptimalPath(routeBuildData);
+		}
+		route_refuge_data.push_back(refugeRoute);
 	}
-
-	pRoute->RemovePoint(&p);
+	refugeRoute.Render(cc, dc, VP, box);
 }
 
 // this method is draft and currently not used
@@ -939,19 +955,15 @@ void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas* cc, ocpnDC& dc
 	}
 }
 
-void Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas * cc, ocpnDC & dc, ViewPort & VP, const LLBBox & box, Route * route, double rescue_start_time)
+WeatherUtils::RouteCheckData Weather::draw_simple_refuge_root_with_conflicts(ChartCanvas * cc, ocpnDC & dc, ViewPort & VP, const LLBBox & box, Route * route, double rescue_start_time)
 {
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
 	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
 	RoutePoint *finish = node_finish->GetData();
-	// draw line btwn route endpoints
-	WeatherUtils::draw_line_on_map(cc, dc, VP, box, start->m_lat, start->m_lon, finish->m_lat, finish->m_lon, wxColour(0, 255, 0, 255));
-
-	// call analyseCheckRoute();
-	analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time, false, false);
+	//WeatherUtils::draw_line_on_map(cc, dc, VP, box, start->m_lat, start->m_lon, finish->m_lat, finish->m_lon, wxColour(0, 255, 0, 255));
+	return analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time, false, false);
 }
-
 void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
 	if (cc->GetShipSpeed() <= 0) { return; }
 	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
