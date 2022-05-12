@@ -210,6 +210,11 @@ CanvasOptions::CanvasOptions( wxWindow *parent)
 	rowOrientationWeather->Add(pCBCalculateRoute, verticalInputFlags);
 	pCBCalculateRoute->SetValue(false);
 	pCBCalculateRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
+	
+	pCBCalculateFuelRoute = new wxCheckBox(pDisplayPanel, IDCO_CALCULATEFUELROUTE, _("Calculate Fuel Rate Route"));
+	rowOrientationWeather->Add(pCBCalculateFuelRoute, verticalInputFlags);
+	pCBCalculateFuelRoute->SetValue(false);
+	pCBCalculateFuelRoute->Connect(wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler(CanvasOptions::OnOptionChange), NULL, this);
 
 	pCBCheckOptimalRoute = new wxCheckBox(pDisplayPanel, IDCO_CHECKOPTIMALROUTE, _("Check Optimal Route"));
 	rowOrientationWeather->Add(pCBCheckOptimalRoute, verticalInputFlags);
@@ -519,6 +524,7 @@ void CanvasOptions::RefreshControlValues( void )
 	pCBDrawWaveHeight->SetValue(parentCanvas->GetDrawWaveHeightEnabled());
 	pCBCheckRoute->SetValue(parentCanvas->GetCheckRouteEnabled());
 	pCBCalculateRoute->SetValue(parentCanvas->GetCalculateRouteEnabled());
+	pCBCalculateFuelRoute->SetValue(parentCanvas->GetCalculateFuelRouteEnabled());
 	pCBCheckOptimalRoute->SetValue(parentCanvas->GetCheckOptimalRoute());
 
 	wxDateTime tempThreeHours(wxDateTime((time_t)parentCanvas->GetStartTimeThreeHours()).ToUTC());
@@ -751,6 +757,10 @@ void CanvasOptions::UpdateCanvasOptions( void )
 
 	if (pCBCalculateRoute->GetValue() != parentCanvas->GetCalculateRouteEnabled()) {
 		parentCanvas->SetCalculateRouteEnabled(!parentCanvas->GetCalculateRouteEnabled());
+		b_needReLoad = true;
+	}
+	if (pCBCalculateFuelRoute->GetValue() != parentCanvas->GetCalculateFuelRouteEnabled()) {
+		parentCanvas->SetCalculateFuelRouteEnabled(!parentCanvas->GetCalculateFuelRouteEnabled());
 		b_needReLoad = true;
 	}
 	if (pCBCheckOptimalRoute->GetValue() != parentCanvas->GetCheckOptimalRoute()) {

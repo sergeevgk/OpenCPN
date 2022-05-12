@@ -12,25 +12,31 @@ using namespace std;
 
 namespace WeatherUtils
 {
+	enum BuildRouteType {
+		OPTIMAL_BY_TIME,
+		OPTIMAL_BY_FUEL_RATE
+	};
+
 	class RouteBuildData {
 	private:
 		double lat_min;
 		double lon_min;
 
 		///cache key
-		/*RoutePoint* start;
-		RoutePoint* finish;*/
 		Route* route;
 		ShipProperties ship;
 		int start_time_index;
+		/// additional flag for optimal time / optimal fuel rate routes
+		BuildRouteType type;
 	public:
 		/// cache data
 		vector<vector<int>> considered_zone_grid;
 		vector<pair<double, pair<int, int>>> optimal_path;
 
-		RouteBuildData(double lat_min, double lon_min) : lat_min(lat_min), lon_min(lon_min) {}
-		RouteBuildData(double lat_min, double lon_min, Route* route, ShipProperties &ship, int start_time_index) :
-			lat_min(lat_min), lon_min(lon_min), ship(ship), start_time_index(start_time_index)
+		/// additional flag for optimal time / optimal fuel rate routes
+		RouteBuildData(double lat_min, double lon_min, BuildRouteType type) : lat_min(lat_min), lon_min(lon_min), type(type) {}
+		RouteBuildData(double lat_min, double lon_min, BuildRouteType type, Route* route, ShipProperties &ship, int start_time_index) :
+			lat_min(lat_min), lon_min(lon_min), type(type), ship(ship), start_time_index(start_time_index)
 		{
 			/*this->start = CopyRoutePoint(start);
 			this->finish = CopyRoutePoint(finish);*/
@@ -43,8 +49,9 @@ namespace WeatherUtils
 			optimal_path.clear();
 		};
 		
-		bool CheckCachedVersion(Route* route, ShipProperties& ship, int start_time_index) {
-			return this->route->IsEqualTo(route) &&
+		bool CheckCachedVersion(BuildRouteType type, Route* route, ShipProperties& ship, int start_time_index) {
+			return this->type == type &&
+				this->route->IsEqualTo(route) &&
 				this->ship == ship &&
 				this->start_time_index == start_time_index;
 		}
@@ -97,7 +104,7 @@ namespace WeatherUtils
 		}
 	};
 
-	bool CheckGetCachedRouteBuildData(vector<RouteBuildData>& items, Route* route, ShipProperties& ship, int start_time_index, RouteBuildData *dst);
+	bool CheckGetCachedRouteBuildData(vector<RouteBuildData>& items, BuildRouteType type, Route* route, ShipProperties& ship, int start_time_index, RouteBuildData *dst);
 }
 
 #endif

@@ -1,5 +1,5 @@
 /*
-Author:   Ilina Elena (ferr.98@mail.ru)
+Authors:   Ilina Elena (ferr.98@mail.ru)
 */
 #ifndef __WEATHER_H__
 #define __WEATHER_H__
@@ -93,7 +93,7 @@ private:
 	void draw_find_refuge_roots(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, RoutePoint currentPosition, double rescue_start_time);
 	void draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, std::vector<std::vector<int>> considered_zone_grid, double rescue_start_time);
 	WeatherUtils::RouteCheckData draw_simple_refuge_root_with_conflicts(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route* route, double rescue_start_time);
-	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box);
+	void draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, bool calculate_by_optimal_time);
 	void draw_check_conflicts_on_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::vector<std::pair<double, std::pair<int, int>>> optimal_route);
 	void get_all_weather_date_data(const std::string& path);
 	double find_max_wave_height();
@@ -111,6 +111,7 @@ private:
 	void create_data_grid();
 	WeatherUtils::RouteCheckData analyseRouteCheck(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, double start_time_shift = 0, bool build_rescue_root = false, bool draw_cone_lines = true);
 	WeatherUtils::RouteBuildData find_fast_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, WeatherUtils::ConsideredZoneBuilder zone_builder, double actual_start_time = 0);
+	WeatherUtils::RouteBuildData find_fuel_optimal_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, WeatherUtils::ConsideredZoneBuilder zone_builder, double actual_start_time = 0);
 	bool check_conflicts_in_weather_grid_cell(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, int lat_ind, int lon_ind);
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,

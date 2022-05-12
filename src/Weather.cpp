@@ -7,11 +7,11 @@
 #include "routeman.h"
 #include "navutil.h"
 #include "chcanv.h"
+#include <chrono>
+#include <thread>
 
 #ifdef ocpnUSE_GL
 #include "glChartCanvas.h"
-#include <chrono>
-#include <thread>
 extern ocpnGLOptions g_GLOptions;
 #endif
 using namespace std;
@@ -99,8 +99,19 @@ Weather::~Weather(void)
 
 }
 
+void SetShipDefaultParameters(ChartCanvas *cc) {
+	cc->SetShipDangerHeight(500);
+	cc->SetShipD(1700);
+	cc->SetShipDraft(1);
+	cc->SetShipL(50);
+	cc->SetShipDelta(850);
+	cc->SetShipN(400);
+	cc->SetShipSpeed(5);
+}
+
 void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 {
+	//SetShipDefaultParameters(cc);
 	draw_refuge_places(cc, dc, VP, box);
 	if (cc->GetDrawWaveHeightEnabled()) {
 		auto end = chrono::steady_clock::now();
@@ -112,7 +123,10 @@ void Weather::Draw(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box)
 		draw_check_route(cc, dc, VP, box);
 	}
 	if (cc->GetCalculateRouteEnabled()) {
-		draw_calculate_route(cc, dc, VP, box);
+		draw_calculate_route(cc, dc, VP, box, true);
+	}
+	if (cc->GetCalculateFuelRouteEnabled()) {
+		draw_calculate_route(cc, dc, VP, box, false);
 	}
 	if (cc->GetCheckOptimalRoute()) {
 		draw_check_conflicts_on_route(cc, dc, VP, box, this->last_optimal_path);
@@ -964,7 +978,7 @@ WeatherUtils::RouteCheckData Weather::draw_simple_refuge_root_with_conflicts(Cha
 	//WeatherUtils::draw_line_on_map(cc, dc, VP, box, start->m_lat, start->m_lon, finish->m_lat, finish->m_lon, wxColour(0, 255, 0, 255));
 	return analyseRouteCheck(cc, dc, VP, box, route, rescue_start_time, false, false);
 }
-void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box) {
+void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, bool calculate_by_optimal_time) {
 	if (cc->GetShipSpeed() <= 0) { return; }
 	if (cc->GetStartTimeThreeHours() >= 3 * 60 * 60) return;
 	if ((cc->GetStartTime() == "no data") || cc->GetStartTime() == "") return;
@@ -996,13 +1010,14 @@ void Weather::draw_calculate_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, co
 	
 		auto considered_zone_builder = WeatherUtils::ConsideredZoneBuilder(ZONE_WIDTH_DEFAULT, new double[4]{ lat_min, lat_max, lon_min, lon_max });
 		// save to last_optimal_path in order to use it in checking optimal route
-		auto routeBuildData = find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_builder);
+		auto routeBuildData = calculate_by_optimal_time ?
+			find_fast_route(cc, dc, VP, box, pRouteDraw, considered_zone_builder) :
+			find_fuel_optimal_route(cc, dc, VP, box, pRouteDraw, considered_zone_builder);
 		last_optimal_path = routeBuildData.optimal_path;
 
 		routeBuildData.Render(cc, dc, VP, box);
 		auto start = chrono::steady_clock::now();
 		SaveKeyValueToFile(TimeMeasureFileName, "draw_calculate_optimal_route", GetMsFromTimePoints(end, start));
-
 	}
 
 	if (is_downloaded) {
@@ -1039,7 +1054,8 @@ WeatherUtils::RouteBuildData Weather::find_fast_route(ChartCanvas *cc, ocpnDC& d
 	if (chart) {
 		s57ch = dynamic_cast<s57chart*>(chart);
 	}
-	auto empty_result = WeatherUtils::RouteBuildData(lat_min, lon_min);
+	WeatherUtils::BuildRouteType type = WeatherUtils::OPTIMAL_BY_TIME;
+	auto empty_result = WeatherUtils::RouteBuildData(lat_min, lon_min, type);
 	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
 	RoutePoint *start = node_start->GetData();
 
@@ -1069,9 +1085,9 @@ WeatherUtils::RouteBuildData Weather::find_fast_route(ChartCanvas *cc, ocpnDC& d
 	}
 
 	auto ship = WeatherUtils::ShipProperties(cc->GetShipDangerHeight(), cc->GetShipN(), cc->GetShipD(), cc->GetShipL(), cc->GetShipDelta(), v_nominal, cc->GetShipDraft());
-	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, route, ship, ind_start_time);
+	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, type, route, ship, ind_start_time);
 
-	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, route, ship, ind_start_time, &routeBuildData))
+	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, type, route, ship, ind_start_time, &routeBuildData))
 	{
 		return routeBuildData;
 	};
@@ -1258,6 +1274,247 @@ WeatherUtils::RouteBuildData Weather::find_fast_route(ChartCanvas *cc, ocpnDC& d
 				{ lat_min_ind, lon_min_ind }
 			};
 			path.push_back(time_coordinates_pair_next);
+			lat_ind_path = lat_min_ind;
+			lon_ind_path = lon_min_ind;
+		}
+		routeBuildData.optimal_path = path;
+		routeBuildData.considered_zone_grid = considered_zone;
+		route_build_data.push_back(routeBuildData);
+		return routeBuildData;
+	}
+	return empty_result;
+}
+
+WeatherUtils::RouteBuildData Weather::find_fuel_optimal_route(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, Route *route, WeatherUtils::ConsideredZoneBuilder zone_builder, double start_time_shift) {
+	ChartBase *chart = cc->GetChartAtCursor();
+	s57chart *s57ch = NULL;
+	if (chart) {
+		s57ch = dynamic_cast<s57chart*>(chart);
+	}
+	WeatherUtils::BuildRouteType type = WeatherUtils::OPTIMAL_BY_FUEL_RATE;
+	auto empty_result = WeatherUtils::RouteBuildData(lat_min, lon_min, type);
+	wxRoutePointListNode *node_start = route->pRoutePointList->GetFirst();
+	RoutePoint *start = node_start->GetData();
+
+	wxRoutePointListNode *node_finish = route->pRoutePointList->GetLast();
+	RoutePoint *finish = node_finish->GetData();
+
+	if (!is_in_weather_area(start->m_lat, start->m_lon)) return empty_result;
+	if (!is_in_weather_area(finish->m_lat, finish->m_lon)) return empty_result;
+	
+	/// assuming that nominal speed equals desired speed
+	double v_nominal = cc->GetShipSpeed();
+
+	std::string start_time = cc->GetStartTime();
+	int ind_start_time = -1;
+	for (int i = 0; i < grid_data.size(); i++) {
+		if (grid_data[i].first == start_time) {
+			ind_start_time = i;
+			break;
+		}
+	}
+	double start_time_three_hours = cc->GetStartTimeThreeHours();
+	std::vector<std::string> all_choices = GetChoicesDateTime();
+	std::sort(all_choices.begin(), all_choices.end());
+
+	ind_start_time = WeatherUtils::get_time_index(ind_start_time, all_choices, start_time_three_hours, start_time_shift);
+	if (ind_start_time == -1) {
+		return empty_result;
+	}
+
+	auto ship = WeatherUtils::ShipProperties(cc->GetShipDangerHeight(), cc->GetShipN(), cc->GetShipD(), cc->GetShipL(), cc->GetShipDelta(), v_nominal, cc->GetShipDraft());
+	WeatherUtils::RouteBuildData routeBuildData(lat_min, lon_min, type, route, ship, ind_start_time);
+
+	if (WeatherUtils::CheckGetCachedRouteBuildData(route_build_data, type, route, ship, ind_start_time, &routeBuildData))
+	{
+		return routeBuildData;
+	};
+
+	auto considered_zone = zone_builder.BuildConsideredZoneFromRoute(route);
+
+	double start_grid_lat = std::round(start->m_lat * 10) / 10;
+	double start_grid_lon = std::round(start->m_lon * 10) / 10;
+	double finish_grid_lat = std::round(finish->m_lat * 10) / 10;
+	double finish_grid_lon = std::round(finish->m_lon * 10) / 10;
+
+
+	const double INF = 2147483647;
+	const double standard_fuel_rate = 1;
+	std::vector<std::vector<double>> D;//lat --- lon
+	//std::priority_queue<std::pair<int, int>, std::vector<std::pair<int, int>>, std::greater<std::pair<int, int>>> q;
+	std::priority_queue<std::pair<double, std::pair<int, int>>, std::vector<std::pair<double, std::pair<int, int>>>, std::greater<std::pair<double, std::pair<int, int>>>> q;
+
+	int lat_size = (lat_max - lat_min) * 10 + 1;
+	int lon_size = (lon_max - lon_min) * 10 + 1;
+
+	for (int j = 0; j < lat_size; j++) {
+		std::vector<double> temp;
+		D.push_back(temp);
+		D[D.size() - 1].resize(lon_size, INF);
+	}
+
+	int start_lat_ind = WeatherUtils::get_coordinate_index(start_grid_lat, this->lat_min);
+	int start_lon_ind = WeatherUtils::get_coordinate_index(start_grid_lon, this->lon_min);
+	int finish_lat_ind = WeatherUtils::get_coordinate_index(finish_grid_lat, this->lat_min);
+	int finish_lon_ind = WeatherUtils::get_coordinate_index(finish_grid_lon, this->lon_min);
+	D[start_lat_ind][start_lon_ind] = 0;
+
+	q.push({ 0, {start_lat_ind, start_lon_ind} });
+
+	while (!q.empty()) {
+		std::pair<double, std::pair<int, int>>  p = q.top();
+		q.pop();
+		if (p.second.first == finish_lat_ind && p.second.second == finish_lon_ind) break;
+
+		int now_lat_ind = p.second.first;
+		int now_lon_ind = p.second.second;
+		double now_weight = p.first;
+
+		if (now_weight > D[now_lat_ind][now_lon_ind]) { continue; }
+
+		for (int i = -1; i <= 1; i++) {
+			for (int j = -1; j <= 1; j++) {
+				if (i == 0 && j == 0) continue;
+				int next_lat_ind = now_lat_ind + i;
+				int next_lon_ind = now_lon_ind + j;
+				if (!is_in_weather_grid(next_lat_ind, next_lon_ind)) continue;
+				if (D[next_lat_ind][next_lon_ind] <= D[now_lat_ind][now_lon_ind]) continue;
+				if (considered_zone[next_lat_ind][next_lon_ind] == -1) continue;
+				double way = std::sqrt((double)(i * i + j * j));
+
+				/////
+				//first half
+				std::pair<int, double> times_for_now = WeatherUtils::get_time_shift(now_weight + start_time_three_hours);
+				if (times_for_now.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string now_str_time = all_choices[times_for_now.first + ind_start_time];
+				if (now_str_time == "" || now_str_time == "no data") continue;
+
+				int ind_now_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == now_str_time) {
+						ind_now_time = i;
+						break;
+					}
+				}
+				PointWeatherData now_square = grid_data[ind_now_time].second[now_lat_ind][now_lon_ind];
+				if (now_square.creation_time == "-1") continue;
+				double sum_waves = now_square.wave_height + now_square.ripple_height;
+				if (sum_waves >= ((double)cc->GetShipDangerHeight()) / 100) {
+					continue;
+				}
+				double alpha = 1. / calculate_speed_koef(cc, sum_waves);
+				double fuel_rate_first_half = standard_fuel_rate * (alpha * alpha);
+
+				//TODO проверка на глубину. Будет осуществляться по кратчайшему пути, без учета прохода по граням и тд.
+				// возможно придется поделить путь пополам и проверить по двум половинам пути с учетом разной скорости для раствора конусов
+				// получить координаты start и finish из индексов
+				double now_lat = WeatherUtils::get_coordinate_from_index(now_lat_ind, this->lat_min);
+				double now_lon = WeatherUtils::get_coordinate_from_index(now_lon_ind, this->lon_min);
+				double next_lat = WeatherUtils::get_coordinate_from_index(next_lat_ind, this->lat_min);
+				double next_lon = WeatherUtils::get_coordinate_from_index(next_lon_ind, this->lon_min);
+
+				// вызвать is_depth_in_cone_enough() с проверкой результата на истину
+				if (!is_depth_in_cone_enough(s57ch, cc, dc, VP, box, wxPoint2DDouble(now_lat, now_lon), wxPoint2DDouble(next_lat, next_lon))) {
+					continue;
+				}
+
+				double time_half_way = (way / 2) / v_nominal;
+
+				/////
+				//second half
+				std::pair<int, double> times_for_half_way = WeatherUtils::get_time_shift(now_weight + start_time_three_hours + time_half_way);
+				if (times_for_half_way.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string half_way_str_time = all_choices[times_for_half_way.first + ind_start_time];
+				if (half_way_str_time == "" || half_way_str_time == "no data") continue;
+
+				int ind_half_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == half_way_str_time) {
+						ind_half_time = i;
+						break;
+					}
+				}
+				PointWeatherData half_square = grid_data[ind_half_time].second[next_lat_ind][next_lon_ind];
+				if (half_square.creation_time == "-1") continue;
+				double sum_waves_half = half_square.wave_height + half_square.ripple_height;
+				if (sum_waves_half > ((double)cc->GetShipDangerHeight()) / 100) {
+					continue;
+				}
+				
+				alpha = 1. / calculate_speed_koef(cc, sum_waves_half);
+				double fuel_rate_second_half = standard_fuel_rate * (alpha * alpha);
+				double time_second_half_way = (way / 2) / v_nominal;
+
+				/////
+				//finish check
+				std::pair<int, double> times_for_whole_way = WeatherUtils::get_time_shift(now_weight + start_time_three_hours + time_half_way + time_second_half_way);
+				if (times_for_whole_way.first + ind_start_time >= all_choices.size()) {
+					continue;
+				}
+				std::string whole_way_str_time = all_choices[times_for_whole_way.first + ind_start_time];
+				if (whole_way_str_time == "" || whole_way_str_time == "no data") continue;
+
+				int ind_whole_time = -1;
+				for (int i = 0; i < all_choices.size(); i++) {
+					if (all_choices[i] == whole_way_str_time) {
+						ind_whole_time = i;
+						break;
+					}
+				}
+				PointWeatherData whole_square = grid_data[ind_whole_time].second[next_lat_ind][next_lon_ind];
+				if (whole_square.creation_time == "-1") continue;
+				double sum_waves_whole = whole_square.wave_height + whole_square.ripple_height;
+				if (sum_waves_whole > ((double)cc->GetShipDangerHeight()) / 100) {
+					continue;
+				}
+
+				///  все проверки пройдены, осталось обновить очередь и внести новые данные в массив
+
+				//double time_to_next = now_weight + time_half_way + time_second_half_way;
+				double fuel_to_next = now_weight + fuel_rate_first_half * time_half_way + fuel_rate_second_half * time_second_half_way;
+				if (fuel_to_next < D[next_lat_ind][next_lon_ind]) {
+					D[next_lat_ind][next_lon_ind] = fuel_to_next;
+					q.push({ fuel_to_next, {next_lat_ind, next_lon_ind} });
+				}
+			}
+		}
+	}
+	if (D[finish_lat_ind][finish_lon_ind] < INF - 1) {
+		vector<pair<double, pair<int, int>>> path;
+		pair<double, pair<int, int>> fuel_coordinates_pair = {
+			D[finish_lat_ind][finish_lon_ind],
+			{ finish_lat_ind, finish_lon_ind }
+		};
+		path.push_back(fuel_coordinates_pair);
+		int lat_ind_path = finish_lat_ind;
+		int lon_ind_path = finish_lon_ind;
+
+		while (lat_ind_path != start_lat_ind || lon_ind_path != start_lon_ind) {
+			double min = INF;
+			int lat_min_ind = -1;
+			int lon_min_ind = -1;
+			for (int i = -1; i <= 1; i++) {
+				for (int j = -1; j <= 1; j++) {
+					if (i == 0 && j == 0) continue;
+					int next_lat_ind = lat_ind_path + i;
+					int next_lon_ind = lon_ind_path + j;
+					if (!is_in_weather_grid(next_lat_ind, next_lon_ind)) continue;
+					if (D[next_lat_ind][next_lon_ind] <= min) {
+						min = D[next_lat_ind][next_lon_ind];
+						lat_min_ind = next_lat_ind;
+						lon_min_ind = next_lon_ind;
+					}
+				}
+			}
+			pair<double, pair<int, int>> fuel_coordinates_pair_next = {
+				D[lat_min_ind][lon_min_ind],
+				{ lat_min_ind, lon_min_ind }
+			};
+			path.push_back(fuel_coordinates_pair_next);
 			lat_ind_path = lat_min_ind;
 			lon_ind_path = lon_min_ind;
 		}
