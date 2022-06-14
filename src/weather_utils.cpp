@@ -51,27 +51,6 @@ std::pair<wxPoint2DDouble, wxPoint2DDouble> get_zone_points(RoutePoint* p1, Rout
 	return std::pair<wxPoint2DDouble, wxPoint2DDouble>(resultPoint1, resultPoint2);
 }
 
-std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> WeatherUtils::create_considered_zone_from_route(Route* route)
-{
-	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> resultList = std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>>();
-	wxRoutePointListNode* prevNode = route->pRoutePointList->GetFirst();
-	double zone_width = ZONE_WIDTH_DEFAULT * 0.1;
-
-	for (wxRoutePointListNode* node = prevNode->GetNext();
-		node;
-		node = node->GetNext()) 
-	{
-		RoutePoint* pPrevRoutePoint = prevNode->GetData();
-		RoutePoint *pRoutePoint = node->GetData();
-		
-		auto zone_points = get_zone_points(pPrevRoutePoint, pRoutePoint, zone_width);
-		
-		resultList.push_back(zone_points);
-
-		prevNode = node;
-	}
-}
-
 void WeatherUtils::draw_considered_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> zone_points) {
 	std::pair<wxPoint2DDouble, wxPoint2DDouble> pointPairPrev = zone_points.front();
 	wxColour zone_color = wxColour(0, 255, 0, 255);

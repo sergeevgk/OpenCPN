@@ -50,10 +50,10 @@ Weather::Weather()
 
 	SaveKeyValueToFile(TimeMeasureFileName, "db_operations", GetMsFromTimePoints(end, start));
 	
-	//end = chrono::steady_clock::now();
-	//Weather::download_weather_from_esimo();
-	//start = chrono::steady_clock::now();
-	//SaveKeyValueToFile(TimeMeasureFileName, "data_download", GetMsFromTimePoints(end, start));
+	end = chrono::steady_clock::now();
+	Weather::download_weather_from_esimo();
+	start = chrono::steady_clock::now();
+	SaveKeyValueToFile(TimeMeasureFileName, "data_download", GetMsFromTimePoints(end, start));
 
 
 	////data = get_all_weather_data("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\clean_data.csv");
@@ -512,12 +512,12 @@ void Weather::check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, 
 		if (select_objects->Number() == 0 && select_areas->Number() == 0)
 			continue;
 
-		if (select_objects->Number() != 0 && !is_deep_enough(select_objects, chart, draft_in_ft)) {
+		if (select_objects->Number() != 0 && !is_depth_sufficient(select_objects, chart, draft_in_ft)) {
 			//WeatherUtils::print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
 			conflicts.push_back(WeatherUtils::ConflictData(point.m_x, point.m_y, 1, shift_time));
 		}
 
-		if (select_areas->Number() != 0 && !is_deep_enough_area(select_areas, chart, draft_in_ft)) {
+		if (select_areas->Number() != 0 && !is_depth_sufficient_area(select_areas, chart, draft_in_ft)) {
 			//WeatherUtils::print_zone(cc, dc, VP, box, point.m_x, point.m_y, wxColour(255, 0, 255, 255));
 			conflicts.push_back(WeatherUtils::ConflictData(point.m_x, point.m_y, 1, shift_time));
 		}
@@ -543,11 +543,11 @@ bool Weather::is_depth_in_cone_enough(s57chart* chart, ChartCanvas *cc, ocpnDC& 
 		if (select_objects->Number() == 0 && select_areas->Number() == 0)
 			continue;
 
-		if (select_objects->Number() != 0 && !is_deep_enough(select_objects, chart, draft_in_ft)) {
+		if (select_objects->Number() != 0 && !is_depth_sufficient(select_objects, chart, draft_in_ft)) {
 			return false;
 		}
 
-		if (select_areas->Number() != 0 && !is_deep_enough_area(select_areas, chart, draft_in_ft)) {
+		if (select_areas->Number() != 0 && !is_depth_sufficient_area(select_areas, chart, draft_in_ft)) {
 			return false;
 		}
 	}
@@ -683,7 +683,7 @@ bool Weather::print_objects_values_to_file(ListOfObjRazRules* list, s57chart* ch
 }
 
 // @param draft - осадка судна
-bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart, float draft) {
+bool Weather::is_depth_sufficient(ListOfObjRazRules* list, s57chart* chart, float draft) {
 	if (list == NULL) {
 		return false;
 	}
@@ -727,7 +727,7 @@ bool Weather::is_deep_enough(ListOfObjRazRules* list, s57chart* chart, float dra
 }
 
 // @param draft - осадка судна
-bool Weather::is_deep_enough_area(ListOfObjRazRules* list, s57chart* chart, float draft) {
+bool Weather::is_depth_sufficient_area(ListOfObjRazRules* list, s57chart* chart, float draft) {
 	if (list == NULL) {
 		return false;
 	}
@@ -1551,6 +1551,13 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 	if (min_lon_ind < 0) min_lon_ind = 0;
 	if (max_lat_ind > now_data.size()) max_lat_ind = now_data.size();
 	//if (max_lon_ind > now_data[0].size()) max_lon_ind = now_data[i].size();
+	int mode = cc->GetWeatherHeightMode();
+	double danger = cc->GetDangerHeight();
+
+	double min_value_wave = find_min_wave_height();
+	double max_value_wave = find_max_wave_height();
+	double min_value_ripple = find_min_ripple_height();
+	double max_value_ripple = find_max_ripple_height();
 
 	for (int i = min_lat_ind; i < max_lat_ind; i++) {
 		for (int j = min_lon_ind; j < max_lon_ind; j++) {
@@ -1563,9 +1570,6 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 			lon = now_data[i][j].longitude;
 
 			cc->GetCanvasPointPix(lat, lon, &r);
-
-			wxPen *pen;
-			pen = g_pRouteMan->GetRoutePointPen();
 
 			int sx2 = 2;
 			int sy2 = 2;
@@ -1592,15 +1596,11 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 			unsigned char transparency = 100;
 
 			int red, green, blue;
-			double min_value_wave = find_min_wave_height();
-			double max_value_wave = find_max_wave_height();
-			double min_value_ripple = find_min_ripple_height();
-			double max_value_ripple = find_max_ripple_height();
+
 			green = 0;
 			red = 0;
 			blue = 0;
 
-			int mode = cc->GetWeatherHeightMode();
 			double now, min_value, max_value;
 			if (mode == WAVE_HEIGHT) {
 				now = now_data[i][j].wave_height;
@@ -1618,7 +1618,6 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 				min_value = min_value_wave + min_value_ripple;
 				max_value = max_value_wave + max_value_ripple;
 			}
-			double danger = cc->GetDangerHeight();
 			double range = max_value - min_value;
 			if (danger > max_value) {
 				range = std::max(danger - min_value, max_value - danger);
@@ -1632,11 +1631,7 @@ void Weather::draw_gradient(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLB
 				transparency = 180;
 			}
 
-
-
 			wxColour hi_colour(red, green, blue, 255);
-			//wxColour hi_colour = pen->GetColour();
-
 
 			//  Highlite any selected point
 			AlphaBlending(dc, r.x + hilitebox.x, r.y + hilitebox.y, hilitebox.width, hilitebox.height, radius,
@@ -2066,7 +2061,7 @@ bool Weather::download_weather_from_esimo() {
 	curl_global_init(CURL_GLOBAL_ALL);
 	curl = curl_easy_init();
 	if (curl) {
-		fp = fopen("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\test_data.csv", "wb");
+		fp = fopen("C:\\Users\\gosha\\Documents\\GitHub\\OpenCPN\\Weather\\temp_data.csv", "wb");
 		//fp = fopen("C:\\Users\\Admin\\Desktop\\TEST\\lena_test_data.csv", "wb");
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1);
 		curl_easy_setopt(curl, CURLOPT_URL, "http://esimo.ru/dataview/getresourceexport");

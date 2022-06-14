@@ -40,7 +40,6 @@ namespace WeatherUtils {
 	// returns angle in radian
 	double calculate_cone_angle(double v);
 	void draw_considered_zone(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> zone_points);
-	std::list<std::pair<wxPoint2DDouble, wxPoint2DDouble>> create_considered_zone_from_route(Route* route);
 	int get_coordinate_index(double coord, double coord_min);
 	int get_time_index(int start_time_index, std::vector<std::string> all_choices, double start_time_three_hours_shift, double start_time_shift);
 	std::pair<int, double> get_time_shift(double time);

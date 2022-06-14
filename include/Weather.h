@@ -116,8 +116,8 @@ private:
 	bool print_objects_values_to_file(ListOfObjRazRules* list, s57chart* chart);
 	void check_land_collision(ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
 		double lat, double lon, s57chart* chart, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time);
-	bool is_deep_enough(ListOfObjRazRules *list, s57chart* chart, float draft);
-	bool is_deep_enough_area(ListOfObjRazRules *list, s57chart* chart, float draft);
+	bool is_depth_sufficient(ListOfObjRazRules *list, s57chart* chart, float draft);
+	bool is_depth_sufficient_area(ListOfObjRazRules *list, s57chart* chart, float draft);
 	void check_depth_in_cone(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box,
 		wxPoint2DDouble start, wxPoint2DDouble end, std::vector<WeatherUtils::ConflictData> &conflicts, double shift_time);
 	bool is_depth_in_cone_enough(s57chart* chart, ChartCanvas *cc, ocpnDC& dc, ViewPort &VP, const LLBBox &box, wxPoint2DDouble start, wxPoint2DDouble end);

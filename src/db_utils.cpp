@@ -38,7 +38,7 @@ static int callback_refuge(void *data, int argc, char **argv, char **azColName) 
 	std::string name = argv[1];
 	double lat = std::strtod(argv[2], nullptr);
 	double lon = std::strtod(argv[3], nullptr);
-	int ship_class = std::stoi(argv[4]);
+	std::string ship_class = argv[4];
 	RefugePlace p = RefugePlace(id, name, lat, lon, ship_class);
 	p_vector_data->push_back(p);
 	return 0;
