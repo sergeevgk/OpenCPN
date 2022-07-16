@@ -997,7 +997,16 @@ set(
   include/vector2D.h
   include/viewport.h
   include/WindowDestroyListener.h
-  include/Weather.h
+  include/Weather/Weather.h
+  include/Weather/db_utils.h
+  include/Weather/refuge_place.h
+  include/Weather/RefugeRouteData.h
+  include/Weather/RouteBuildData.h
+  include/Weather/RouteCheckData.h
+  include/Weather/ship_class.h
+  include/Weather/ship_properties.h
+  include/Weather/weather_render_utilities.h
+  include/Weather/weather_utils.h
   ${CMAKE_BINARY_DIR}/include/config.h
 )
 
@@ -1119,7 +1128,16 @@ set(
   src/undo.cpp
   src/update_mgr.cpp
   src/viewport.cpp
-  src/Weather.cpp
+  src/Weather/Weather.cpp
+  src/Weather/db_utils.cpp
+  src/Weather/refuge_place.cpp
+  src/Weather/RefugeRouteData.cpp
+  src/Weather/RouteBuildData.cpp
+  src/Weather/RouteCheckData.cpp
+  src/Weather/ship_class.cpp
+  src/Weather/ship_properties.cpp
+  src/Weather/weather_render_utilities.cpp
+  src/Weather/weather_utils.cpp
 )
 
 if (OCPN_USE_GARMINHOST)

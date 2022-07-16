@@ -35,7 +35,7 @@
 #include "viewport.h"
 #include "TexFont.h"
 #include "ocpndc.h"
-#include "Weather.h"
+#include "Weather/Weather.h"
 
  #define FORMAT_BITS           GL_RGB
 
