@@ -25,3 +25,5 @@ src/opencpn.rc
 .DS_Store
 NSIS.template.in
 version?git
+.vs/
+*.bak

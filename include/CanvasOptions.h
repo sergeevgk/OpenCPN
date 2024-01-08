@@ -29,6 +29,9 @@
 #define __canvasoption_H__
 
 #include "chart1.h"
+#include <wx/timectrl.h>
+#include <wx/dateevt.h>
+#include <wx/spinctrl.h>
 
 //----------------------------------------------------------------------------
 //   constants
@@ -55,6 +58,22 @@ enum {
     IDCO_ENCANCHOR_CHECKBOX1,
     IDCO_SHOW_AIS_CHECKBOX,
     IDCO_ATTEN_AIS_CHECKBOX,
+	IDCO_RIPPLEHEIGHTCHECKBOX,
+	IDCO_WAVERIPPLEHEIGHTCHECKBOX,
+	ID_DANGERHEIGHT,
+	IDCO_CHECKROUTE,
+	IDCO_CALCULATEROUTE,
+	IDCO_CALCULATEFUELROUTE,
+	IDCO_CHECKOPTIMALROUTE,
+	ID_THREEHOURSTIME,
+	ID_SHIPDANGERHEIGHT,
+	ID_SHIPN,
+	ID_SHIPD,
+	ID_SHIPL,
+	ID_SHIPDELTA,
+	ID_SHIPSPEED,
+	ID_SHIPDRAFT,
+	IDCO_DRAW_WAVE_HEIGHT
 };
 
 class MyFrame;
@@ -96,6 +115,13 @@ private:
     wxSlider *m_pSlider_Zoom_Vector;
     wxRadioButton *pCBCourseUp, *pCBNorthUp, *pCBHeadUp, *pRBSizeAuto, *pRBSizeManual;
     wxCheckBox *pEnableZoomToCursor, *pPreserveScale;
+	wxRadioButton *pWaveHeight, *pRippleHeight, *pWaveRippleHeight, *pWind;
+
+	wxSlider *pSliderDangerHeight;
+	wxChoice *pChoiceDateTime, *pChoiceStartTime;
+	wxCheckBox *pCBDrawWaveHeight, *pCBCheckRoute, *pCBCalculateRoute, *pCBCalculateFuelRoute, *pCBCheckOptimalRoute;
+	wxTimePickerCtrl *pThreeHoursTime;
+	wxSpinCtrl *pShipDangerHeight, *pShipN, *pShipD, *pShipL, *pShipDelta, *pShipSpeed, *pShipDraft;
     
     wxCheckBox *pCDOTides, *pCDOCurrents;
     wxCheckBox *pCDOENCText, *pCBToolbar;

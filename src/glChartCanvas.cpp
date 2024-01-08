@@ -1781,6 +1781,18 @@ ViewPort glChartCanvas::ClippedViewport(const ViewPort &vp, const LLRegion &regi
 }
 
 
+void glChartCanvas::DrawWeather(ViewPort &vp)
+{
+	if(!m_pParentCanvas->m_toolbar_isweatherenabled)
+		return;
+	ocpnDC dc(*this);
+
+	std::vector<std::string> choices = weather.GetChoicesDateTime();
+	m_pParentCanvas->SetDateTimeChoices(choices);
+	weather.Draw( m_pParentCanvas, dc, vp, vp.GetBBox() );
+}
+
+
 void glChartCanvas::DrawStaticRoutesTracksAndWaypoints( ViewPort &vp )
 {
     if(!m_pParentCanvas->m_bShowNavobjects)
@@ -3850,6 +3862,8 @@ void glChartCanvas::RenderWorldChart(ocpnDC &dc, ViewPort &vp, wxRect &rect, boo
 void glChartCanvas::DrawGroundedOverlayObjects(ocpnDC &dc, ViewPort &vp)
 {
     m_pParentCanvas->RenderAllChartOutlines( dc, vp );
+
+	DrawWeather(vp);
 
     DrawStaticRoutesTracksAndWaypoints( vp );
 

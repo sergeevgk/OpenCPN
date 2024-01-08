@@ -48,6 +48,7 @@
 #include "emboss_data.h"
 #include "S57Sector.h"
 #include "gshhs.h"
+#include "Weather/Weather.h"
 
 class wxGLContext;
 class GSHHSChart;
@@ -133,6 +134,12 @@ enum {
     NORTH_UP_MODE,
     COURSE_UP_MODE,
     HEAD_UP_MODE
+};
+
+enum {
+	WAVE_HEIGHT,
+	RIPPLE_HEIGHT,
+	WAVE_RIPPLE_HEIGHT
 };
 
 //----------------------------------------------------------------------------
@@ -397,7 +404,8 @@ public:
       int         m_upMode;
       bool        m_bLookAhead;
       double      m_VPRotate;
-      
+	  Weather	   weather;
+
       void DrawBlinkObjects( void );
 
       void StartRoute(void);
@@ -436,6 +444,54 @@ public:
       void TouchAISToolActive( void );
       void UpdateAISTBTool( void );
       void SetToolbarScaleFactor( double scale_factor){ m_toolbar_scalefactor = scale_factor; }
+	  bool GetToolbarWeatherEnabled() { return m_toolbar_isweatherenabled; }
+	  void SetToolbarWeatherEnabled(bool weather_enabled){
+			m_toolbar_isweatherenabled = weather_enabled; 
+			//ReloadVP();
+	  }
+	  int GetWeatherHeightMode() { return m_height_view_mode; }
+	  void SetWeatherHeightMode(int mode) { m_height_view_mode = mode; }
+	  double GetDangerHeight() { return m_danger_height; }
+	  void SetDangerHeight(double height) { m_danger_height = height; }
+	  std::string GetDateTime() { return m_date_time; }
+	  void SetDateTime(std::string time) { 
+		  m_date_time = time;
+		  //ReloadVP();
+	  }
+	  std::string GetStartTime() { return m_start_time; }
+	  void SetStartTime(std::string time) {
+		  m_start_time = time;
+	  }
+	  int GetStartTimeThreeHours() { return m_start_time_three_hours; }
+	  void SetStartTimeThreeHours(int time) { m_start_time_three_hours = time; }
+	  int GetShipDangerHeight() { return m_ship_danger_height; }
+	  void SetShipDangerHeight(int height) { m_ship_danger_height = height; }
+	  int GetShipN() { return m_ship_n; }
+	  void SetShipN(int n) { m_ship_n = n; }
+	  int GetShipD() { return m_ship_d; }
+	  void SetShipD(int d) { m_ship_d = d; }
+	  int GetShipL() { return m_ship_l; }
+	  void SetShipL(int l) { m_ship_l = l; }
+	  int GetShipDelta() { return m_ship_delta; }
+	  void SetShipDelta(int delta) { m_ship_delta = delta; }
+	  int GetShipSpeed() { return m_ship_speed; }
+	  int GetShipDraft() { return m_ship_draft; }
+	  void SetShipSpeed(int speed) { m_ship_speed = speed; }
+	  void SetShipDraft(int draft) { m_ship_draft = draft; }
+	  std::vector<std::string> GetDateTimeChoices() { return m_data_time_choices; }
+	  void SetDateTimeChoices(std::vector<std::string> choices) { 
+		  m_data_time_choices = choices; 
+	  }
+	  bool GetDrawWaveHeightEnabled() { return m_is_draw_wave_height_enabled; }
+	  void SetDrawWaveHeightEnabled(bool is_enabled) { m_is_draw_wave_height_enabled = is_enabled; }
+	  bool GetCheckRouteEnabled() { return m_is_check_route_enabled; }
+	  void SetCheckRouteEnabled(bool is_enabled) { m_is_check_route_enabled = is_enabled; }
+	  bool GetCalculateRouteEnabled() { return m_is_calculate_route_enabled; }
+	  void SetCalculateRouteEnabled(bool is_enabled) { m_is_calculate_route_enabled = is_enabled; }
+	  bool GetCheckOptimalRoute() { return m_is_check_optimal_route_enabled; }
+	  void SetCheckOptimalRouteEnabled(bool is_enabled) { m_is_check_optimal_route_enabled = is_enabled; }
+	  bool GetCalculateFuelRouteEnabled() { return m_is_calculate_fuel_route_enabled; }
+	  void SetCalculateFuelRouteEnabled(bool is_enabled) { m_is_calculate_fuel_route_enabled = is_enabled; }
       ocpnFloatingToolbarDialog *GetToolbar(){ return m_toolBar; }
       void SetToolbarConfigString( wxString& config){ m_toolbarConfig = config; }
       wxString GetToolbarConfigString(){ return m_toolbarConfig; }
@@ -663,7 +719,8 @@ private:
 
       void GridDraw(ocpnDC& dc); // Display lat/lon Grid in chart display
       void ScaleBarDraw( ocpnDC& dc );
-
+	  
+	  void DrawWeather(ocpnDC &dc, ViewPort &vp);
       void DrawOverlayObjects ( ocpnDC &dc, const wxRegion& ru );
 
       emboss_data *EmbossDepthScale();
@@ -848,6 +905,29 @@ private:
 
       ocpnFloatingToolbarDialog *m_toolBar;
       double      m_toolbar_scalefactor;
+
+	  
+	  bool		  m_toolbar_isweatherenabled;
+	  int		  m_height_view_mode;
+	  double	  m_danger_height;//metres
+	  std::string m_date_time;
+	  std::string m_start_time;
+	  std::vector<std::string> m_data_time_choices;
+	  bool		  m_is_draw_wave_height_enabled;
+	  bool		  m_is_check_route_enabled;
+	  bool		  m_is_calculate_route_enabled;
+	  bool		  m_is_calculate_fuel_route_enabled;
+	  bool		  m_is_check_optimal_route_enabled;
+	  int		  m_start_time_three_hours;
+	  int		  m_ship_danger_height;//sm
+	  int		  m_ship_n;
+	  int		  m_ship_d;
+	  int		  m_ship_l;
+	  int		  m_ship_delta;
+	  int		  m_ship_speed;
+	  int		  m_ship_draft;
+
+
       wxString    m_toolbarConfig;
       wxPoint     m_toolbarPosition;
       long        m_toolbarOrientation;
@@ -902,7 +982,6 @@ private:
       wxRect       m_scaleBarRect;
       bool         m_bShowCompassWin;
       bool         m_pianoFrozen;
-
 
 DECLARE_EVENT_TABLE()
 };

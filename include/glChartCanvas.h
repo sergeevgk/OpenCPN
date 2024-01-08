@@ -35,6 +35,7 @@
 #include "viewport.h"
 #include "TexFont.h"
 #include "ocpndc.h"
+#include "Weather/Weather.h"
 
  #define FORMAT_BITS           GL_RGB
 
@@ -139,6 +140,7 @@ class ocpnDC;
 class emboss_data;
 class Route;
 class ChartBaseBSB;
+class Weather;
 
 class glChartCanvas : public wxGLCanvas
 {
@@ -208,6 +210,8 @@ public:
     
     void DrawDynamicRoutesTracksAndWaypoints( ViewPort &vp );
     void DrawStaticRoutesTracksAndWaypoints( ViewPort &vp );
+
+	void DrawWeather(ViewPort &vp);
     
     void RenderAllChartOutlines( ocpnDC &dc, ViewPort &VP );
     void RenderChartOutline( ocpnDC &dc, int dbIndex, ViewPort &VP );
@@ -357,6 +361,9 @@ protected:
     int          m_tideTexHeight;
     int          m_currentTexWidth;
     int          m_currentTexHeight;
+
+
+	Weather weather;
     
     DECLARE_EVENT_TABLE()
 };

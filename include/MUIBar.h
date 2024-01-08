@@ -83,6 +83,7 @@ public:
     void SetColorScheme( ColorScheme cs );
     void SetCanvasENCAvailable( bool avail );
     void OnScaleSelected( wxMouseEvent &event );
+	void OnWeatherSelected(wxMouseEvent &event);
 
 private:
     void Init( void );
@@ -102,6 +103,7 @@ private:
     MUIButton   *m_menuButton;
     MUIButton   *m_followButton;
     wxStaticText *m_scaleTextBox;
+	wxStaticText *m_weatherTextBox;
     
     CanvasOptions *m_canvasOptions;
     wxPoint     m_targetCOPos;

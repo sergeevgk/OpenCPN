@@ -529,14 +529,15 @@ bool dashboard_pi::DeInit( void )
 }
 
 double GetJsonDouble(wxJSONValue &value) {
-    double d_ret;
+    double d_ret =0;
     if (value.IsDouble()) {
-        return d_ret = value.AsDouble();
+        d_ret = value.AsDouble();
     }
-    else if (value.IsInt()) {
-        int i_ret = value.AsInt();
-        return d_ret = i_ret;
+    else if (value.IsLong()) {
+        int i_ret = value.AsLong();
+        d_ret = i_ret;
     }
+    return d_ret;
 }
 
 void dashboard_pi::Notify()
@@ -857,12 +858,14 @@ void dashboard_pi::SetNMEASentence( wxString &sentence )
 
         else if( m_NMEA0183.LastSentenceIDReceived == _T("GSV") ) {
             if( m_NMEA0183.Parse() ) {
-                mSatsInView = m_NMEA0183.Gsv.SatsInView;
                 // m_NMEA0183.Gsv.NumberOfMessages;
-                SendSentenceToAllInstruments( OCPN_DBP_STC_SAT, m_NMEA0183.Gsv.SatsInView, _T("") );
-                SendSatInfoToAllInstruments( m_NMEA0183.Gsv.SatsInView,
-                        m_NMEA0183.Gsv.MessageNumber, m_NMEA0183.Gsv.SatInfo );
-
+                if (m_NMEA0183.Gsv.MessageNumber == 1) { 
+                    //Some GNSS print SatsInView in message #1 only
+                    mSatsInView = m_NMEA0183.Gsv.SatsInView;
+                    SendSentenceToAllInstruments (OCPN_DBP_STC_SAT, m_NMEA0183.Gsv.SatsInView, _T (""));
+                }
+                SendSatInfoToAllInstruments (mSatsInView, 
+                                             m_NMEA0183.Gsv.MessageNumber, m_NMEA0183.Gsv.SatInfo);
                 mGPS_Watchdog = gps_watchdog_timeout_ticks;
             }
         }
@@ -1494,6 +1497,7 @@ void dashboard_pi::updateSKItem(wxJSONValue &item, wxString &sfixtime) {
        && item.HasMember("value")) {
         const wxString &update_path = item["path"].AsString();
         wxJSONValue &value = item["value"];
+        
         if(update_path == _T("navigation.position")) {
             if (mPriPosition >= 2) {
                 if (value["latitude"].IsDouble() && value["longitude"].IsDouble()) {
